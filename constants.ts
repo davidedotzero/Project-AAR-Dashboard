@@ -14,3 +14,13 @@ export const statusColorMap: { [key: string]: string } = {
 };
 
 export const PIE_COLORS: string[] = ['#ff8c58', '#ff6b2c', '#e05a20', '#c24e18', '#a34211', '#85360a', '#662b04'];
+
+export const phaseColorMap: { [key: string]: { bg: string; text: string } } = {
+  "Research & Planning":    { bg: 'bg-sky-100',    text: 'text-sky-800' },
+  "Strategy & Positioning": { bg: 'bg-blue-100',   text: 'text-blue-800' },
+  "Content Preparation":    { bg: 'bg-indigo-100', text: 'text-indigo-800' },
+  "Pre-Launch":             { bg: 'bg-purple-100', text: 'text-purple-800' },
+  "Launch Day":             { bg: 'bg-pink-100',   text: 'text-pink-800' },
+  "Post-Launch":            { bg: 'bg-rose-100',   text: 'text-rose-800' },
+  "Measurement & Optimization": { bg: 'bg-green-100',  text: 'text-green-800' },
+};

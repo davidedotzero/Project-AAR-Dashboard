@@ -114,6 +114,11 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, o
                                 <input type="text" name="Feedback to Team" value={formData['Feedback to Team']} onChange={handleChange} className={baseInputClass} />
                             </FormField>
                         </div>
+                        <div className="md:col-span-2">
+                             <FormField label="Owner Feedback">
+                                <input type="text" name="Owner Feedback" value={formData['Owner Feedback']} onChange={handleChange} className={baseInputClass} />
+                            </FormField>
+                        </div>
                     </div>
                     
                     <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">

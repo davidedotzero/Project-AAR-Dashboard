@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React   from 'react';
 import type { Task } from '../types';
-import { statusColorMap } from '../constants';
+import { statusColorMap, phaseColorMap } from '../constants';
 import { EditIcon } from './icons';
+
 
 interface TasksTabProps {
     filteredTasks: Task[];
@@ -17,12 +18,14 @@ export const TasksTab: React.FC<TasksTabProps> = ({ filteredTasks, onEditTask })
                     <table className="w-full text-sm text-left text-gray-600">
                         <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
                             <tr>
+                                <th scope="col" className="px-6 py-4 font-medium">Phase</th>
                                 <th scope="col" className="px-6 py-4 font-medium">Task</th>
                                 <th scope="col" className="px-6 py-4 font-medium">Owner</th>
                                 <th scope="col" className="px-6 py-4 font-medium">Deadline</th>
                                 <th scope="col" className="px-6 py-4 font-medium">Status</th>
                                 <th scope="col" className="px-6 py-4 font-medium text-center">Impact</th>
                                 <th scope="col" className="px-6 py-4 font-medium">Feedback</th>
+                                <th scope="col" className="px-6 py-4 font-medium">Owner Feedback</th>
                                 <th scope="col" className="px-4 py-4 font-medium text-center">แก้ไข</th>
                             </tr>
                         </thead>
@@ -34,6 +37,14 @@ export const TasksTab: React.FC<TasksTabProps> = ({ filteredTasks, onEditTask })
                             ) : (
                                 filteredTasks.map((task) => (
                                 <tr key={task._id} className="bg-white border-b last:border-b-0 border-gray-200 hover:bg-orange-50 transition-colors duration-200">
+                                    <td className="px-6 py-4">
+                                        <span className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full 
+                                            ${phaseColorMap[task.Phase]?.bg || 'bg-gray-100'} 
+                                            ${phaseColorMap[task.Phase]?.text || 'text-gray-800'}`}
+                                        >
+                                            {task.Phase}
+                                        </span>
+                                    </td>
                                     <td className="px-6 py-4 font-medium text-gray-900">{task.Task}</td>
                                     <td className="px-6 py-4">
                                         <span className="px-2.5 py-1 text-xs font-semibold text-orange-800 bg-orange-100 rounded-full">{task.Owner}</span>
@@ -42,6 +53,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ filteredTasks, onEditTask })
                                     <td className={`px-6 py-4 font-semibold ${statusColorMap[task.Status] || 'text-gray-500'}`}>{task.Status}</td>
                                     <td className="px-6 py-4 text-center font-bold text-gray-700">{task['Impact Score']}</td>
                                     <td className="px-6 py-4 text-red-600">{task['Feedback to Team']}</td>
+                                    <td className="px-6 py-4 text-red-600">{task['Owner Feedback']}</td>
                                     <td className="px-4 py-4 text-center">
                                         <button 
                                             onClick={() => onEditTask(task)}

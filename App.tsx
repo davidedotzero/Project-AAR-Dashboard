@@ -12,7 +12,7 @@ import { EditTaskModal } from './components/EditTaskModal';
 /**
  * IMPORTANT: Replace this placeholder with your actual Google Apps Script Web App URL.
  */
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1JT5sdqIYnAQygK_YH2zp8L-rLaHLSzQdn4IUvIM0_wfI3WxH-N-YQhikjEqeX5OQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyeFXgcSG1D02uyLNYYPCafvKEhNjcM95suqFQ8qEhy6sgow-WbqhCQll14eACy3iIZ/exec';
 
 
 const LoadingIndicator: React.FC<{ message: string }> = ({ message }) => (
@@ -42,7 +42,7 @@ const App = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    
+
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [currentTask, setCurrentTask] = useState<Task | null>(null);
 
@@ -59,7 +59,7 @@ const App = () => {
                 const res = await fetch(`${SCRIPT_URL}?op=getProjects`);
                 if (!res.ok) throw new Error(`ไม่สามารถโหลดโปรเจกต์ได้ (HTTP ${res.status})`);
                 const data = await res.json();
-                
+
                 if (!Array.isArray(data)) throw new Error('ข้อมูลโปรเจกต์ที่ได้รับไม่ถูกต้อง');
 
                 const formattedProjects: Project[] = data.map((p: any) => ({
@@ -72,7 +72,7 @@ const App = () => {
                 if (formattedProjects.length > 0) {
                     setSelectedProjectId(formattedProjects[0].ProjectID);
                 } else {
-                    setTasks([]); 
+                    setTasks([]);
                 }
             } catch (err: any) {
                 setError(err.message);
@@ -89,16 +89,47 @@ const App = () => {
         const fetchTasks = async () => {
             setLoadingMessage(`กำลังโหลด Task ของ ${selectedProjectId}...`);
             setError(null);
-            setTasks([]);
+            setTasks([]); // Clear existing tasks before fetching new ones
+
             try {
                 const res = await fetch(`${SCRIPT_URL}?op=getTasks&projectId=${selectedProjectId}`);
                 if (!res.ok) throw new Error(`ไม่สามารถโหลด Task ได้ (HTTP ${res.status})`);
-                const data = await res.json();
-                
-                if (!Array.isArray(data)) throw new Error('ข้อมูล Task ที่ได้รับไม่ถูกต้อง');
 
-                const formattedTasks: Task[] = data.map((t: any, index: number) => ({
-                    _id: `${t.ProjectID}-${t.rowIndex}-${index}`, // Create a stable unique ID
+                const data = await res.json();
+                if (!Array.isArray(data)) throw new Error("ข้อมูล Task ที่ได้รับไม่ถูกต้อง");
+
+                // --- เพิ่มส่วนนี้เข้ามาเพื่อจัดเรียงลำดับ ---
+
+                // 1. สร้าง Array แม่แบบสำหรับเรียงลำดับ Phase
+                const phaseOrder = [
+                    "Research & Planning",
+                    "Strategy & Positioning",
+                    "Content Preparation",
+                    "Pre-Launch",
+                    "Launch Day",
+                    "Post-Launch",
+                    "Measurement & Optimization",
+                ];
+
+                // 2. จัดเรียงข้อมูล (data) ที่ได้รับมาใหม่
+                const sortedData = data.sort((a, b) => {
+                    const phaseAIndex = phaseOrder.indexOf(a.Phase);
+                    const phaseBIndex = phaseOrder.indexOf(b.Phase);
+
+                    // ถ้า Phase เหมือนกัน ให้คงลำดับเดิมไว้ (หรือจะเรียงตาม Task name ก็ได้)
+                    if (phaseAIndex === phaseBIndex) {
+                        return 0;
+                    }
+
+                    return phaseAIndex - phaseBIndex;
+                });
+
+                // --- จบส่วนที่เพิ่มเข้ามา ---
+
+
+                // ใช้ sortedData แทน data เดิมในการ map ข้อมูล
+                const formattedTasks: Task[] = sortedData.map((t: any, index: number) => ({
+                    _id: `${t.ProjectID}-${t.rowIndex}-${index}`,
                     rowIndex: t.rowIndex,
                     ProjectID: t.ProjectID,
                     Check: t['Check ✅'] === true || String(t['Check ✅']).toLowerCase() === 'true',
@@ -117,6 +148,7 @@ const App = () => {
                     'Project Feedback': t['Project Feedback'],
                     MilestoneID: t.MilestoneID,
                 }));
+
                 setTasks(formattedTasks);
             } catch (err: any) {
                 setError(err.message);
@@ -124,8 +156,53 @@ const App = () => {
                 setLoadingMessage(null);
             }
         };
+
         fetchTasks();
     }, [selectedProjectId]);
+
+    // useEffect(() => {
+    //     if (!selectedProjectId) return;
+
+    //     const fetchTasks = async () => {
+    //         setLoadingMessage(`กำลังโหลด Task ของ ${selectedProjectId}...`);
+    //         setError(null);
+    //         setTasks([]);
+    //         try {
+    //             const res = await fetch(`${SCRIPT_URL}?op=getTasks&projectId=${selectedProjectId}`);
+    //             if (!res.ok) throw new Error(`ไม่สามารถโหลด Task ได้ (HTTP ${res.status})`);
+    //             const data = await res.json();
+
+    //             if (!Array.isArray(data)) throw new Error('ข้อมูล Task ที่ได้รับไม่ถูกต้อง');
+
+    //             const formattedTasks: Task[] = data.map((t: any, index: number) => ({
+    //                 _id: `${t.ProjectID}-${t.rowIndex}-${index}`, // Create a stable unique ID
+    //                 rowIndex: t.rowIndex,
+    //                 ProjectID: t.ProjectID,
+    //                 Check: t['Check ✅'] === true || String(t['Check ✅']).toLowerCase() === 'true',
+    //                 Phase: t.Phase,
+    //                 Task: t.Task,
+    //                 Owner: t.Owner,
+    //                 Deadline: t.Deadline ? new Date(t.Deadline).toISOString().split('T')[0] : '',
+    //                 Status: t.Status,
+    //                 'Est. Hours': Number(t['Est. Hours']) || 0,
+    //                 'Actual Hours': t['Actual Hours'] ? Number(t['Actual Hours']) : null,
+    //                 'Impact Score': Number(t['Impact Score']) || 0,
+    //                 Timeliness: t.Timeliness,
+    //                 'Notes / Result': t['Notes / Result'],
+    //                 'Feedback to Team': t['Feedback to Team'],
+    //                 'Owner Feedback': t['Owner Feedback'],
+    //                 'Project Feedback': t['Project Feedback'],
+    //                 MilestoneID: t.MilestoneID,
+    //             }));
+    //             setTasks(formattedTasks);
+    //         } catch (err: any) {
+    //             setError(err.message);
+    //         } finally {
+    //             setLoadingMessage(null);
+    //         }
+    //     };
+    //     fetchTasks();
+    // }, [selectedProjectId]);
 
     const {
         operationScore,
@@ -140,7 +217,7 @@ const App = () => {
                 name: status,
                 Tasks: tasks.filter(t => t.Status === status).length,
             }));
-             const ownerCounts: TasksByOwner = ownerOptions.map(owner => ({
+            const ownerCounts: TasksByOwner = ownerOptions.map(owner => ({
                 name: owner,
                 value: tasks.filter(t => t.Owner === owner).length,
             })).filter(o => o.value > 0);
@@ -162,18 +239,18 @@ const App = () => {
             name: status,
             Tasks: tasks.filter(t => t.Status === status).length,
         }));
-        
+
         const ownerCounts: TasksByOwner = ownerOptions.map(owner => ({
             name: owner,
             value: tasks.filter(t => t.Owner === owner).length,
         })).filter(o => o.value > 0);
 
         return {
-        operationScore: opScore.toFixed(2),
-        efficiencyRatio: effRatio.toFixed(1),
-        onTimePerformance: onTimePerf.toFixed(1),
-        tasksByStatus: statusCounts,
-        tasksByOwner: ownerCounts,
+            operationScore: opScore.toFixed(2),
+            efficiencyRatio: effRatio.toFixed(1),
+            onTimePerformance: onTimePerf.toFixed(1),
+            tasksByStatus: statusCounts,
+            tasksByOwner: ownerCounts,
         };
     }, [tasks]);
 
@@ -181,7 +258,7 @@ const App = () => {
         if (filterTeam === 'ALL') return tasks;
         return tasks.filter(task => task['Feedback to Team'] && task['Feedback to Team'].includes(`@${filterTeam}`));
     }, [tasks, filterTeam]);
-    
+
     const handleEditClick = (task: Task) => {
         setCurrentTask(task);
         setIsEditModalOpen(true);
@@ -199,13 +276,13 @@ const App = () => {
         // NOTE: For this to work, you MUST deploy a new version of your Google Apps Script
         // with a `doPost(e)` function in the `API.gs` file to handle the update.
         try {
-             await fetch(SCRIPT_URL, {
+            await fetch(SCRIPT_URL, {
                 method: 'POST',
                 redirect: 'follow',
-                body: JSON.stringify({op: 'updateTask', task: updatedTask }),
+                body: JSON.stringify({ op: 'updateTask', task: updatedTask }),
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
             });
-            
+
             // Optimistic UI update using the stable client-side _id
             setTasks(prevTasks =>
                 prevTasks.map(t => (t._id === updatedTask._id ? updatedTask : t))
@@ -217,14 +294,14 @@ const App = () => {
             setLoadingMessage(null);
         }
     };
-  
+
     const tabTitles: { [key: string]: string } = {
         aar: `สรุปผล: ${projects.find(p => p.ProjectID === selectedProjectId)?.Name || ''}`,
         tasks: `รายการ Task: ${projects.find(p => p.ProjectID === selectedProjectId)?.Name || ''}`,
         projects: 'โปรเจกต์ทั้งหมด',
         config: 'ตั้งค่า'
     };
-    
+
     const renderContent = () => {
         if (loadingMessage && !isEditModalOpen) return <LoadingIndicator message={loadingMessage} />;
         if (error) return <ErrorDisplay message={error} />;
@@ -232,12 +309,12 @@ const App = () => {
             return <div className="text-center text-gray-500 mt-10">ไม่พบโปรเจกต์</div>;
         }
         if (projects.length > 0 && !selectedProjectId) {
-             return <div className="text-center text-gray-500 mt-10">กรุณาเลือกโปรเจกต์</div>;
+            return <div className="text-center text-gray-500 mt-10">กรุณาเลือกโปรเจกต์</div>;
         }
 
         switch (activeTab) {
             case 'aar':
-                return <AarTab 
+                return <AarTab
                     operationScore={operationScore}
                     efficiencyRatio={efficiencyRatio}
                     onTimePerformance={onTimePerformance}
@@ -249,8 +326,8 @@ const App = () => {
             case 'projects':
                 return <ProjectsTab projects={projects} />;
             case 'config':
-                return <SettingsTab 
-                    ownerOptions={ownerOptions} 
+                return <SettingsTab
+                    ownerOptions={ownerOptions}
                     statusOptions={statusOptions}
                     phaseOptions={phaseOptions}
                 />;
@@ -261,7 +338,7 @@ const App = () => {
 
     return (
         <div className="flex h-screen bg-gray-50 font-sans">
-            <Sidebar 
+            <Sidebar
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
                 filterTeam={filterTeam}
@@ -290,7 +367,7 @@ const App = () => {
                     </div>
                 </header>
                 <div className="flex-grow relative">
-                   {loadingMessage && isEditModalOpen && (
+                    {loadingMessage && isEditModalOpen && (
                         <div className="absolute inset-0 bg-white bg-opacity-75 z-20 flex items-center justify-center">
                             <LoadingIndicator message={loadingMessage} />
                         </div>
@@ -298,8 +375,8 @@ const App = () => {
                     {renderContent()}
                 </div>
             </main>
-             {isEditModalOpen && currentTask && (
-                <EditTaskModal 
+            {isEditModalOpen && currentTask && (
+                <EditTaskModal
                     isOpen={isEditModalOpen}
                     onClose={handleCloseModal}
                     onSave={handleSaveTask}
