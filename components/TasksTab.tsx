@@ -33,7 +33,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ filteredTasks, onEditTask })
                                 </tr>
                             ) : (
                                 filteredTasks.map((task) => (
-                                <tr key={task.rowIndex} className="bg-white border-b last:border-b-0 border-gray-200 hover:bg-orange-50 transition-colors duration-200">
+                                <tr key={task._id} className="bg-white border-b last:border-b-0 border-gray-200 hover:bg-orange-50 transition-colors duration-200">
                                     <td className="px-6 py-4 font-medium text-gray-900">{task.Task}</td>
                                     <td className="px-6 py-4">
                                         <span className="px-2.5 py-1 text-xs font-semibold text-orange-800 bg-orange-100 rounded-full">{task.Owner}</span>

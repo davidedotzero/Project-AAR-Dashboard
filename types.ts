@@ -1,5 +1,6 @@
 
 export interface Task {
+  _id?: string; // Client-side unique identifier
   rowIndex: number;
   ProjectID: string;
   Check: boolean;

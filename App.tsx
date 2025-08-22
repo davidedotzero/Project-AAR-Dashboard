@@ -12,7 +12,7 @@ import { EditTaskModal } from './components/EditTaskModal';
 /**
  * IMPORTANT: Replace this placeholder with your actual Google Apps Script Web App URL.
  */
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMQQNfpEc-pFmIIRXjOQEb8mtsIgLAaLrbjESggVryG_kmnZMOkSTtO5lawfrJB0Sb/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1JT5sdqIYnAQygK_YH2zp8L-rLaHLSzQdn4IUvIM0_wfI3WxH-N-YQhikjEqeX5OQ/exec';
 
 
 const LoadingIndicator: React.FC<{ message: string }> = ({ message }) => (
@@ -33,7 +33,7 @@ const ErrorDisplay: React.FC<{ message: string }> = ({ message }) => (
 );
 
 
-const App: React.FC = () => {
+const App = () => {
     const [activeTab, setActiveTab] = useState('aar');
     const [filterTeam, setFilterTeam] = useState('ALL');
 
@@ -97,8 +97,8 @@ const App: React.FC = () => {
                 
                 if (!Array.isArray(data)) throw new Error('ข้อมูล Task ที่ได้รับไม่ถูกต้อง');
 
-                // Note: The backend API.gs script must be modified to return 'rowIndex' for each task.
-                const formattedTasks: Task[] = data.map((t: any) => ({
+                const formattedTasks: Task[] = data.map((t: any, index: number) => ({
+                    _id: `${t.ProjectID}-${t.rowIndex}-${index}`, // Create a stable unique ID
                     rowIndex: t.rowIndex,
                     ProjectID: t.ProjectID,
                     Check: t['Check ✅'] === true || String(t['Check ✅']).toLowerCase() === 'true',
@@ -206,9 +206,9 @@ const App: React.FC = () => {
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
             });
             
-            // Optimistic UI update
+            // Optimistic UI update using the stable client-side _id
             setTasks(prevTasks =>
-                prevTasks.map(t => (t.rowIndex === updatedTask.rowIndex ? updatedTask : t))
+                prevTasks.map(t => (t._id === updatedTask._id ? updatedTask : t))
             );
             handleCloseModal();
         } catch (err: any) {
