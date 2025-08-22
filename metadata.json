@@ -1,0 +1,5 @@
+{
+  "name": "Project AAR Dashboard",
+  "description": "A comprehensive dashboard for tracking project tasks, performance, and overall progress with After Action Review (AAR) insights. It visualizes key metrics like operational scores, efficiency, and on-time performance.",
+  "requestFramePermissions": []
+}
