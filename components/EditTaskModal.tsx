@@ -1,136 +1,413 @@
+import React, { useState, useEffect } from "react";
+import type { Task } from "../types";
+import {
+  ownerOptions,
+  statusOptions,
+  statusColorMap,
+  timelinessOptions,
+  impactScoreOptions,
+  phaseColorMap,
+} from "../constants";
+import { ArrowLeftIcon, ArrowRightIcon } from "./icons";
 
-import React, { useState, useEffect } from 'react';
-import type { Task } from '../types';
-import { ownerOptions, statusOptions, timelinessOptions, impactScoreOptions } from '../constants';
-
-interface EditTaskModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (task: Task) => void;
-    task: Task;
-}
-
-const FormField: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-        {children}
-    </div>
+const DetailItem: React.FC<{ label: string; children: React.ReactNode }> = ({
+  label,
+  children,
+}) => (
+  <div>
+    <p className="text-sm font-medium text-gray-500">{label}</p>
+    <div className="mt-1 text-gray-900">{children}</div>
+  </div>
 );
 
-const baseInputClass = "w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm text-gray-900";
+// --- Component ย่อยสำหรับแสดงผลในโหมด View เท่านั้น ---
+const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
+  return (
+    <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
+      <div className="md:col-span-3">
+        <DetailItem label="Task">
+          <p className="text-lg font-semibold">{task.Task}</p>
+        </DetailItem>
+      </div>
 
-
-export const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onSave, task }) => {
-    const [formData, setFormData] = useState<Task>(task);
-
-    useEffect(() => {
-        setFormData(task);
-    }, [task]);
-
-    if (!isOpen) return null;
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value, type } = e.target;
-        
-        let processedValue: string | number | null = value;
-        if (type === 'number') {
-            processedValue = value === '' ? null : Number(value);
-        }
-
-        setFormData(prev => ({ ...prev, [name]: processedValue }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSave(formData);
-    };
-
-    return (
-        <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center p-4"
-            onClick={onClose}
+      <DetailItem label="Phase">
+        <span
+          className={`px-2.5 py-1 text-sm font-semibold rounded-full ${
+            phaseColorMap[task.Phase]?.bg
+          } ${phaseColorMap[task.Phase]?.text}`}
         >
-            <div 
-                className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
-                onClick={e => e.stopPropagation()}
-            >
-                <div className="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h2 className="text-xl font-bold text-gray-800">แก้ไข Task</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">&times;</button>
-                </div>
-                
-                <form onSubmit={handleSubmit} className="overflow-y-auto">
-                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                        <div className="md:col-span-2">
-                             <FormField label="Task">
-                                <input type="text" name="Task" value={formData.Task} onChange={handleChange} className={baseInputClass} required/>
-                            </FormField>
-                        </div>
+          {task.Phase}
+        </span>
+      </DetailItem>
 
-                        <FormField label="Owner">
-                            <select name="Owner" value={formData.Owner} onChange={handleChange} className={baseInputClass}>
-                                {ownerOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                        </FormField>
+      <DetailItem label="Owner">
+        <span className="px-2.5 py-1 text-sm font-semibold text-orange-800 bg-orange-100 rounded-full">
+          {task.Owner}
+        </span>
+      </DetailItem>
 
-                        <FormField label="Deadline">
-                            <input type="date" name="Deadline" value={formData.Deadline} onChange={handleChange} className={baseInputClass} />
-                        </FormField>
+      <DetailItem label="Status">
+        <p
+          className={`font-bold ${
+            statusColorMap[task.Status]
+          } || 'text-gray-500'}`}
+        >
+          {task.Status}
+        </p>
+      </DetailItem>
 
-                        <FormField label="Status">
-                            <select name="Status" value={formData.Status} onChange={handleChange} className={baseInputClass}>
-                                {statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                        </FormField>
-                        
-                        <FormField label="Timeliness">
-                            <select name="Timeliness" value={formData.Timeliness} onChange={handleChange} className={baseInputClass}>
-                                 <option value="">N/A</option>
-                                {timelinessOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                        </FormField>
-                        
-                        <FormField label="Est. Hours">
-                            <input type="number" name="Est. Hours" value={formData['Est. Hours'] ?? ''} onChange={handleChange} className={baseInputClass} />
-                        </FormField>
+      <DetailItem label="Deadline">
+        <p>
+          {task.Deadline
+            ? new Date(task.Deadline).toLocaleDateString("th-TH")
+            : "N/A"}
+        </p>
+      </DetailItem>
 
-                        <FormField label="Actual Hours">
-                            <input type="number" name="Actual Hours" value={formData['Actual Hours'] ?? ''} onChange={handleChange} className={baseInputClass} />
-                        </FormField>
-                        
-                        <FormField label="Impact Score">
-                            <select name="Impact Score" value={formData['Impact Score']} onChange={handleChange} className={baseInputClass}>
-                                {impactScoreOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                        </FormField>
+      <DetailItem label="Est. Hours">
+        <p>{task["Est. Hours"] ?? 0} ชั่วโมง</p>
+      </DetailItem>
 
-                        <div className="md:col-span-2">
-                            <FormField label="Notes / Result">
-                                <textarea name="Notes / Result" value={formData['Notes / Result']} onChange={handleChange} className={baseInputClass} rows={3}></textarea>
-                            </FormField>
-                        </div>
-                        <div className="md:col-span-2">
-                             <FormField label="Feedback to Team">
-                                <input type="text" name="Feedback to Team" value={formData['Feedback to Team']} onChange={handleChange} className={baseInputClass} />
-                            </FormField>
-                        </div>
-                        <div className="md:col-span-2">
-                             <FormField label="Owner Feedback">
-                                <input type="text" name="Owner Feedback" value={formData['Owner Feedback']} onChange={handleChange} className={baseInputClass} />
-                            </FormField>
-                        </div>
-                    </div>
-                    
-                    <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none">
-                            ยกเลิก
-                        </button>
-                        <button type="submit" className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none">
-                            บันทึก
-                        </button>
-                    </div>
-                </form>
-            </div>
+      <DetailItem label="Actual Hours">
+        <p>{task["Actual Hours"] ?? "N/A"} ชั่วโมง</p>
+      </DetailItem>
+
+      <DetailItem label="Impact Score">
+        <p className="font-bold">{task["Impact Score"]}</p>
+      </DetailItem>
+
+      <DetailItem label="Timeliness">
+        <p>{task.Timeliness || "N/A"}</p>
+      </DetailItem>
+
+      <div className="md:col-span-3">
+        <DetailItem label="Notes / Result">
+          <p className="p-2 bg-gray-50 rounded-md border min-h-[50px]">
+            {task["Notes / Result"] || "-"}
+          </p>
+        </DetailItem>
+      </div>
+
+      <div className="md:col-span-3">
+        <DetailItem label="Feedback to Team">
+          <p className="p-2 bg-gray-50 rounded-md border min-h-[50px]">
+            {task["Feedback to Team"] || "-"}
+          </p>
+        </DetailItem>
+      </div>
+    </div>
+  );
+};
+
+interface EditTaskModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (task: Task) => void;
+  task: Task;
+  isViewOnly?: boolean;
+  onNavigate: (direction: "next" | "previous") => void;
+  canNavigatePrev: boolean;
+  canNavigateNext: boolean;
+}
+
+const FormField: React.FC<{ label: string; children: React.ReactNode }> = ({
+  label,
+  children,
+}) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      {label}
+    </label>
+    {children}
+  </div>
+);
+
+export const EditTaskModal: React.FC<EditTaskModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  task,
+  isViewOnly = false,
+  onNavigate,
+  canNavigatePrev,
+  canNavigateNext,
+}) => {
+  const [formData, setFormData] = useState<Task | null>(null);
+
+  useEffect(() => {
+    if (task) {
+      const formattedTask = {
+        ...task,
+        Deadline: task.Deadline
+          ? new Date(task.Deadline).toISOString().split("T")[0]
+          : "",
+      };
+      setFormData(formattedTask);
+    }
+  }, [task]);
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
+    const { name, value, type } = e.target;
+
+    let processedValue: string | number | null = value;
+    if (type === "number") {
+      processedValue = value === "" ? null : Number(value);
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: processedValue }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  const baseInputClass =
+    "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-500";
+
+  if (!isOpen || !formData) return null;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center p-4"
+      onClick={onClose} // คลิกพื้นหลังสีดำเพื่อปิด
+    >
+      <div
+        className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()} // ป้องกันการปิดเมื่อคลิกที่ตัว Modal
+      >
+        <div
+          className={`flex justify-between items-center p-6 border-b rounded-t-xl
+                    ${phaseColorMap[formData.Phase]?.bg || "bg-gray-100"} 
+                    ${
+                      phaseColorMap[formData.Phase]?.border || "border-gray-200"
+                    }`}
+        >
+          <button
+            onClick={() => onNavigate("previous")}
+            disabled={!canNavigatePrev}
+            className="p-2 rounded-full disabled:opacity-20 disabled:cursor-not-allowed transition-opacity"
+          >
+            <ArrowLeftIcon />
+          </button>
+          <h2
+            className={`text-xl font-bold ${
+              phaseColorMap[formData.Phase]?.text || "text-gray-800"
+            }`}
+          >
+            {isViewOnly ? `รายละเอียด: ${formData.Task}` : "แก้ไข Task"}
+          </h2>
+          <button
+            onClick={onClose}
+            className={`text-2xl font-bold opacity-70 hover:opacity-100 ${
+              phaseColorMap[formData.Phase]?.text || "text-gray-600"
+            }`}
+          >
+            &times;
+          </button>
+          <button
+            onClick={() => onNavigate("next")}
+            disabled={!canNavigateNext}
+            className="p-2 rounded-full disabled:opacity-20 disabled:cursor-not-allowed transition-opacity"
+          >
+            <ArrowRightIcon />
+          </button>
         </div>
-    );
+
+        <div className="overflow-y-auto">
+          {isViewOnly ? (
+            <TaskDetailsView task={formData} />
+          ) : (
+            <form onSubmit={handleSubmit} className="overflow-y-auto">
+              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                <div className="md:col-span-2">
+                  <FormField label="Task">
+                    <input
+                      type="text"
+                      name="Task"
+                      value={formData.Task}
+                      onChange={handleChange}
+                      className={baseInputClass}
+                      required
+                      disabled={isViewOnly}
+                    />
+                  </FormField>
+                </div>
+
+                {/* 2. เพิ่ม prop "disabled" ให้กับทุก input โดยอิงจาก isViewOnly */}
+                <FormField label="Owner">
+                  <select
+                    name="Owner"
+                    value={formData.Owner}
+                    onChange={handleChange}
+                    className={baseInputClass}
+                    disabled={isViewOnly}
+                  >
+                    {ownerOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Deadline">
+                  <input
+                    type="date"
+                    name="Deadline"
+                    value={formData.Deadline}
+                    onChange={handleChange}
+                    className={baseInputClass}
+                    disabled={isViewOnly}
+                  />
+                </FormField>
+
+                <FormField label="Status">
+                  <select
+                    name="Status"
+                    value={formData.Status}
+                    onChange={handleChange}
+                    className={baseInputClass}
+                    disabled={isViewOnly}
+                  >
+                    {statusOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Timeliness">
+                  <select
+                    name="Timeliness"
+                    value={formData.Timeliness}
+                    onChange={handleChange}
+                    className={baseInputClass}
+                    disabled={isViewOnly}
+                  >
+                    <option value="">N/A</option>
+                    {timelinessOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Est. Hours">
+                  <input
+                    type="number"
+                    name="Est. Hours"
+                    value={formData["Est. Hours"] ?? ""}
+                    onChange={handleChange}
+                    className={baseInputClass}
+                    disabled={isViewOnly}
+                  />
+                </FormField>
+
+                <FormField label="Actual Hours">
+                  <input
+                    type="number"
+                    name="Actual Hours"
+                    value={formData["Actual Hours"] ?? ""}
+                    onChange={handleChange}
+                    className={baseInputClass}
+                    disabled={isViewOnly}
+                  />
+                </FormField>
+
+                <FormField label="Impact Score">
+                  <select
+                    name="Impact Score"
+                    value={formData["Impact Score"]}
+                    onChange={handleChange}
+                    className={baseInputClass}
+                    disabled={isViewOnly}
+                  >
+                    {impactScoreOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <div className="md:col-span-2">
+                  <FormField label="Notes / Result">
+                    <textarea
+                      name="Notes / Result"
+                      value={formData["Notes / Result"]}
+                      onChange={handleChange}
+                      className={baseInputClass}
+                      rows={3}
+                      disabled={isViewOnly}
+                    ></textarea>
+                  </FormField>
+                </div>
+                <div className="md:col-span-2">
+                  <FormField label="Feedback to Team">
+                    <input
+                      type="text"
+                      name="Feedback to Team"
+                      value={formData["Feedback to Team"]}
+                      onChange={handleChange}
+                      className={baseInputClass}
+                      disabled={isViewOnly}
+                    />
+                  </FormField>
+                </div>
+                <div className="md:col-span-2">
+                  <FormField label="Owner Feedback">
+                    <input
+                      type="text"
+                      name="Owner Feedback"
+                      value={formData["Owner Feedback"]}
+                      onChange={handleChange}
+                      className={baseInputClass}
+                      disabled={isViewOnly}
+                    />
+                  </FormField>
+                </div>
+              </div>
+
+              <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                {/* 3. เปลี่ยนปุ่มตามโหมด */}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none"
+                >
+                  {isViewOnly ? "ปิด" : "ยกเลิก"}
+                </button>
+                {!isViewOnly && ( // แสดงปุ่ม "บันทึก" เฉพาะ Edit Mode เท่านั้น
+                  <button
+                    type="submit"
+                    className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none"
+                  >
+                    บันทึก
+                  </button>
+                )}
+              </div>
+            </form>
+          )}
+        </div>
+        {isViewOnly && (
+          <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl mt-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none"
+            >
+              ปิด
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
