@@ -13,12 +13,16 @@ import { TasksTab } from "./components/TasksTab";
 import { ProjectsTab } from "./components/ProjectsTab";
 import { SettingsTab } from "./components/SettingsTab";
 import { EditTaskModal } from "./components/EditTaskModal";
+import { v4 as uuidv4 } from "uuid";
+import { CreateProjectModal } from "./components/CreateProjectModal";
+import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
 
 /**
  * IMPORTANT: Replace this placeholder with your actual Google Apps Script Web App URL.
  */
 const SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbyeFXgcSG1D02uyLNYYPCafvKEhNjcM95suqFQ8qEhy6sgow-WbqhCQll14eACy3iIZ/exec";
+  "https://script.google.com/macros/s/AKfycbx1ESg7JPRexdgQ8PXQ5bOrvGWuS9SknmSqjoc7AwGlKGxtO-kwu7vJE0CwkSIiCrhz/exec";
+// react-v-11
 
 const LoadingIndicator: React.FC<{ message: string }> = ({ message }) => (
   <div className="flex flex-col items-center justify-center h-full">
@@ -73,42 +77,103 @@ const App = () => {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      if (SCRIPT_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) {
-        setError("กรุณาตั้งค่า URL ของ Google Apps Script ในไฟล์ App.tsx");
-        return;
-      }
-      setLoadingMessage("กำลังโหลดโปรเจกต์...");
-      setError(null);
-      try {
-        const res = await fetch(`${SCRIPT_URL}?op=getProjects`);
-        if (!res.ok)
-          throw new Error(`ไม่สามารถโหลดโปรเจกต์ได้ (HTTP ${res.status})`);
-        const data = await res.json();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [initialTasks, setInitialTasks] = useState<Task[]>([]);
 
-        if (!Array.isArray(data))
-          throw new Error("ข้อมูลโปรเจกต์ที่ได้รับไม่ถูกต้อง");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ type: 'task' | 'project', data: any } | null>(null);
 
-        const formattedProjects: Project[] = data.map((p: any) => ({
-          ProjectID: p.projectId,
-          Name: p.projectName,
-          Priority: p.priority,
-        }));
+  const openDeleteModal = (type: 'task' | 'project', data: any) => {
+        setItemToDelete({ type, data });
+        setIsDeleteModalOpen(true);
+    };
 
-        setProjects(formattedProjects);
-        if (formattedProjects.length > 0) {
-          setSelectedProjectId(formattedProjects[0].ProjectID);
-        } else {
-          setTasks([]);
+  const handleConfirmDelete = async () => {
+        if (!itemToDelete) return;
+        
+        setLoadingMessage("กำลังลบข้อมูล...");
+        const { type, data } = itemToDelete;
+        
+        try {
+            const op = type === 'task' ? 'deleteTask' : 'deleteProject';
+            const body = type === 'task' 
+                ? { op, rowIndex: data.rowIndex } 
+                : { op, projectId: data.ProjectID };
+
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(body),
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+            });
+
+            if (type === 'task') {
+                setTasks(prev => prev.filter(t => t._id !== data._id));
+            } else { // project
+                await fetchProjects(); // โหลดโปรเจกต์ใหม่ทั้งหมด
+            }
+
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoadingMessage(null);
+            setIsDeleteModalOpen(false);
+            setItemToDelete(null);
         }
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoadingMessage(null);
+    };
+
+  const fetchProjects = async () => {
+    if (SCRIPT_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) {
+      setError("กรุณาตั้งค่า URL ของ Google Apps Script ในไฟล์ App.tsx");
+      return;
+    }
+    setLoadingMessage("กำลังโหลดโปรเจกต์...");
+    setError(null);
+    try {
+      const res = await fetch(`${SCRIPT_URL}?op=getProjects`);
+      if (!res.ok)
+        throw new Error(`ไม่สามารถโหลดโปรเจกต์ได้ (HTTP ${res.status})`);
+      const data = await res.json();
+
+      if (!Array.isArray(data))
+        throw new Error("ข้อมูลโปรเจกต์ที่ได้รับไม่ถูกต้อง");
+
+      const formattedProjects: Project[] = data.map((p: any) => ({
+        ProjectID: p.projectId,
+        Name: p.projectName,
+        Priority: p.priority,
+      }));
+
+      setProjects(formattedProjects);
+      if (formattedProjects.length > 0) {
+        setSelectedProjectId(formattedProjects[0].ProjectID); // เลือกโปรเจกต์แรกเป็นค่าเริ่มต้น
+      } else {
+        setSelectedProjectId(null);
+        setTasks([]);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoadingMessage(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+
+    const fetchInitialTasks = async () => {
+      try {
+        const res = await fetch(`${SCRIPT_URL}?op=getInitialTasks`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          // สร้าง _id จำลองสำหรับใช้ใน React key
+          const formatted = data.map((t, i) => ({ ...t, _id: `init-${i}` }));
+          setInitialTasks(formatted);
+        }
+      } catch (err) {
+        console.error("Failed to fetch initial tasks:", err);
       }
     };
-    fetchProjects();
+    fetchInitialTasks();
   }, []);
 
   useEffect(() => {
@@ -284,11 +349,11 @@ const App = () => {
   };
 
   const handleViewClick = (task: Task) => {
-        const findIndex = tasks.findIndex(t => t._id === task._id);
-        setCurrentIndex(findIndex);
-        setCurrentTask(task);
-        setIsViewModalOpen(true);
-    };
+    const findIndex = tasks.findIndex((t) => t._id === task._id);
+    setCurrentIndex(findIndex);
+    setCurrentTask(task);
+    setIsViewModalOpen(true);
+  };
 
   const handleCloseModal = () => {
     setIsEditModalOpen(false);
@@ -297,17 +362,17 @@ const App = () => {
     setCurrentIndex(null);
   };
 
-  const handleNavigateTask = (direction: 'next' | 'previous') => {
-        if (currentIndex === null || !tasks) return;
+  const handleNavigateTask = (direction: "next" | "previous") => {
+    if (currentIndex === null || !tasks) return;
 
-        const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    const newIndex = direction === "next" ? currentIndex + 1 : currentIndex - 1;
 
-        // เช็คว่า index ใหม่ยังอยู่ในขอบเขตของ Array
-        if (newIndex >= 0 && newIndex < tasks.length) {
-            setCurrentIndex(newIndex);
-            setCurrentTask(tasks[newIndex]);
-        }
-    };
+    // เช็คว่า index ใหม่ยังอยู่ในขอบเขตของ Array
+    if (newIndex >= 0 && newIndex < tasks.length) {
+      setCurrentIndex(newIndex);
+      setCurrentTask(tasks[newIndex]);
+    }
+  };
 
   const handleSaveTask = async (updatedTask: Task) => {
     if (!currentTask) return;
@@ -341,6 +406,38 @@ const App = () => {
     }`,
     projects: "โปรเจกต์ทั้งหมด",
     config: "ตั้งค่า",
+    create: "สร้างโปรเจกต์ใหม่",
+  };
+
+  const handleCreateProject = async (
+    projectName: string,
+    selectedTasks: string[]
+  ) => {
+    setLoadingMessage("กำลังสร้างโปรเจกต์...");
+    try {
+      const newProjectId = `PROJ-${uuidv4().slice(0, 8).toUpperCase()}`;
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          op: "createNewProject",
+          project: {
+            projectId: newProjectId,
+            projectName: projectName,
+            selectedTaskNames: selectedTasks,
+          },
+        }),
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+      });
+      // ... (handle response, refresh projects list) ...
+      await fetchProjects();
+      setSelectedProjectId(newProjectId);
+      setActiveTab("tasks");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoadingMessage(null);
+      setIsCreateModalOpen(false); // ปิด Modal เมื่อเสร็จ
+    }
   };
 
   const renderContent = () => {
@@ -377,10 +474,12 @@ const App = () => {
             filteredTasks={filteredTasks}
             onEditTask={handleEditClick}
             onTaskView={handleViewClick}
+            onDeleteTask={(taskId) => openDeleteModal('task', tasks.find(t => t._id === taskId))}
           />
         );
       case "projects":
-        return <ProjectsTab projects={projects} />;
+        return (<ProjectsTab projects={projects}
+          onDeleteProject={(project) => openDeleteModal('project', project)} />);
       case "config":
         return (
           <SettingsTab
@@ -402,8 +501,9 @@ const App = () => {
         filterTeam={filterTeam}
         setFilterTeam={setFilterTeam}
         ownerOptions={ownerOptions}
+        onOpenCreateProject={() => setIsCreateModalOpen(true)}
       />
-      
+
       <main className="w-3/4 p-8 overflow-y-auto flex flex-col">
         <header className="flex justify-between items-center mb-6 pb-6 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-3xl font-bold text-gray-800 truncate pr-4">
@@ -443,6 +543,13 @@ const App = () => {
           {renderContent()}
         </div>
       </main>
+      <CreateProjectModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={handleCreateProject}
+        initialTasks={initialTasks}
+        isLoading={!!loadingMessage}
+      />
       {(isEditModalOpen || isViewModalOpen) && currentTask && (
         <EditTaskModal
           isOpen={isEditModalOpen || isViewModalOpen}
@@ -452,9 +559,23 @@ const App = () => {
           isViewOnly={isViewModalOpen}
           onNavigate={handleNavigateTask}
           canNavigatePrev={currentIndex !== null && currentIndex > 0}
-          canNavigateNext={currentIndex !== null && currentIndex < tasks.length - 1}
+          canNavigateNext={
+            currentIndex !== null && currentIndex < tasks.length - 1
+          }
         />
       )}
+      <ConfirmDeleteModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title={`ยืนยันการลบ ${itemToDelete?.type === 'project' ? 'โปรเจกต์' : 'Task'}`}
+                message={
+                    itemToDelete?.type === 'project'
+                    ? `คุณแน่ใจหรือไม่ว่าต้องการลบโปรเจกต์ "${itemToDelete?.data.Name}"? การกระทำนี้จะลบ Task ทั้งหมดที่เกี่ยวข้องและไม่สามารถย้อนกลับได้`
+                    : `คุณแน่ใจหรือไม่ว่าต้องการลบ Task "${itemToDelete?.data.Task}"?`
+                }
+                isLoading={!!loadingMessage}
+            />
     </div>
   );
 };

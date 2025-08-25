@@ -1,18 +1,20 @@
 import React, { useState, useMemo, useEffect } from "react";
 import type { Task } from "../types";
 import { statusColorMap, phaseColorMap, phaseOptions } from "../constants";
-import { EditIcon, ChevronDownIcon, ViewIcon } from "./icons"; // <-- เพิ่ม ViewIcon ด้วย
+import { EditIcon, ChevronDownIcon, ViewIcon, DeleteIcon } from "./icons"; // <-- เพิ่ม ViewIcon ด้วย
 
 interface TasksTabProps {
   filteredTasks: Task[]; // <-- เปลี่ยน prop เป็น tasks (ข้อมูลดิบ)
   onEditTask: (task: Task) => void;
   onTaskView: (task: Task) => void;
+  onDeleteTask: (task: Task) => void;
 }
 
 export const TasksTab: React.FC<TasksTabProps> = ({
   filteredTasks,
   onEditTask,
   onTaskView,
+  onDeleteTask,
 }) => {
   // --- ส่วนที่ 1: Hooks และ Logic (ถูกต้องแล้ว) ---
   const [expandedPhases, setExpandedPhases] = useState<{
@@ -146,6 +148,13 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                               aria-label="Edit Task"
                             >
                               <EditIcon />
+                            </button>
+                            <button
+                              onClick={() => onDeleteTask(task._id)}
+                              className="text-gray-500 hover:text-red-600 p-2 rounded-full hover:bg-red-100"
+                              aria-label="Delete Task"
+                            >
+                              <DeleteIcon />
                             </button>
                           </div>
                         </td>
