@@ -1,6 +1,11 @@
 import React, { useState, useMemo, useEffect } from "react";
 import type { Task } from "../types";
-import { statusColorMap, phaseColorMap, phaseOptions, ownerOptions } from "../constants";
+import {
+  statusColorMap,
+  phaseColorMap,
+  phaseOptions,
+  ownerOptions,
+} from "../constants";
 import { EditIcon, ChevronDownIcon, ViewIcon, DeleteIcon } from "./icons"; // <-- เพิ่ม ViewIcon ด้วย
 import { TaskFilters } from "./TaskFilters";
 import { DeadlineAlert } from "./DeadlineAlert";
@@ -11,6 +16,7 @@ interface TasksTabProps {
   onEditTask: (task: Task) => void;
   onTaskView: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
+  onOpenCreateTask: (phase: string) => void;
 }
 
 export const TasksTab: React.FC<TasksTabProps> = ({
@@ -19,12 +25,15 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   onEditTask,
   onTaskView,
   onDeleteTask,
+  onOpenCreateTask,
 }) => {
   const tasksCountByOwner = useMemo(() => {
     if (!tasks) return {};
     const counts: { [key: string]: number } = {};
-    ownerOptions.forEach(owner => {
-      const activeTasks = tasks.filter(task => task.Owner === owner && task.Status !== 'Done').length;
+    ownerOptions.forEach((owner) => {
+      const activeTasks = tasks.filter(
+        (task) => task.Owner === owner && task.Status !== "Done"
+      ).length;
       if (activeTasks > 0) {
         counts[owner] = activeTasks;
       }
@@ -43,42 +52,44 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   };
 
   const filteredTasks = useMemo(() => {
-        if (!tasks) return [];
-        
-        return tasks.filter((task: Task) => {
-            const activeFilterKeys = Object.keys(filters).filter(key => filters[key]);
+    if (!tasks) return [];
 
-            if (activeFilterKeys.length === 0) {
-                return true;
-            }
-            return activeFilterKeys.every(field => {
-                const filterValue = filters[field].toLowerCase();
-                const taskValue = task[field as keyof Task];
+    return tasks.filter((task: Task) => {
+      const activeFilterKeys = Object.keys(filters).filter(
+        (key) => filters[key]
+      );
 
-                if (taskValue === null || taskValue === undefined) {
-                    return false;
-                }
-                
-                const taskValueString = String(taskValue).toLowerCase();
-                if (field === 'Owner' || field === 'Status' || field === 'Phase') {
-                    return taskValueString === filterValue;
-                } else {
-                    return taskValueString.includes(filterValue);
-                }
-            });
-        });
-    }, [tasks, filters]);
+      if (activeFilterKeys.length === 0) {
+        return true;
+      }
+      return activeFilterKeys.every((field) => {
+        const filterValue = filters[field].toLowerCase();
+        const taskValue = task[field as keyof Task];
+
+        if (taskValue === null || taskValue === undefined) {
+          return false;
+        }
+
+        const taskValueString = String(taskValue).toLowerCase();
+        if (field === "Owner" || field === "Status" || field === "Phase") {
+          return taskValueString === filterValue;
+        } else {
+          return taskValueString.includes(filterValue);
+        }
+      });
+    });
+  }, [tasks, filters]);
 
   const tasksByPhase = useMemo(() => {
-        const grouped: { [key: string]: Task[] } = {};
-        phaseOptions.forEach(phase => {
-            const tasksInPhase = filteredTasks.filter(task => task.Phase === phase);
-            if (tasksInPhase.length > 0) {
-                grouped[phase] = tasksInPhase;
-            }
-        });
-        return grouped;
-    }, [filteredTasks]);
+    const grouped: { [key: string]: Task[] } = {};
+    phaseOptions.forEach((phase) => {
+      const tasksInPhase = filteredTasks.filter((task) => task.Phase === phase);
+      if (tasksInPhase.length > 0) {
+        grouped[phase] = tasksInPhase;
+      }
+    });
+    return grouped;
+  }, [filteredTasks]);
 
   useEffect(() => {
     if (Object.keys(tasksByPhase).length > 0) {
@@ -102,18 +113,29 @@ export const TasksTab: React.FC<TasksTabProps> = ({
       <TaskFilters filters={filters} onFilterChange={handleFilterChange} />
 
       <div className="mb-6 p-4 bg-white border rounded-xl shadow-sm">
-        <h3 className="text-md font-bold text-gray-700 mb-3">สรุป Task ที่ต้องดำเนินการ (Active)</h3>
+        <h3 className="text-md font-bold text-gray-700 mb-3">
+          สรุป Task ที่ต้องดำเนินการ (Active)
+        </h3>
         <div className="flex flex-wrap gap-3">
           {Object.keys(tasksCountByOwner).length > 0 ? (
-             Object.entries(tasksCountByOwner).map(([owner, count]) => (
-                <div key={owner} className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 rounded-full">
-                  <span className="font-semibold text-gray-800 text-sm">{owner}:</span>
-                  <span className="font-bold text-orange-600 text-lg">{count}</span>
-                  <span className="text-gray-500 text-sm">Tasks</span>
-                </div>
+            Object.entries(tasksCountByOwner).map(([owner, count]) => (
+              <div
+                key={owner}
+                className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 rounded-full"
+              >
+                <span className="font-semibold text-gray-800 text-sm">
+                  {owner}:
+                </span>
+                <span className="font-bold text-orange-600 text-lg">
+                  {count}
+                </span>
+                <span className="text-gray-500 text-sm">Tasks</span>
+              </div>
             ))
           ) : (
-            <p className="text-sm text-gray-500">ไม่มี Task ที่ต้องดำเนินการในขณะนี้</p>
+            <p className="text-sm text-gray-500">
+              ไม่มี Task ที่ต้องดำเนินการในขณะนี้
+            </p>
           )}
         </div>
       </div>
@@ -162,6 +184,16 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                           <span className="ml-4 text-gray-500 font-medium">
                             ({tasksInPhase.length} Tasks)
                           </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenCreateTask(phase);
+                            }}
+                            className="ml-4 text-sm font-bold text-orange-500 hover:text-orange-700 transition-colors"
+                            aria-label={`Add new task to ${phase}`}
+                          >
+                            + Add Task
+                          </button>
                         </div>
                         <button
                           className={`p-1 rounded-full transform transition-transform duration-200 ${
@@ -189,7 +221,10 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                           </span>
                         </td>
                         <td className="px-6 py-4 border-b border-gray-200">
-                          <DeadlineAlert deadline={task.Deadline} status={task.Status} />
+                          <DeadlineAlert
+                            deadline={task.Deadline}
+                            status={task.Status}
+                          />
                         </td>
                         <td
                           className={`px-6 py-4 font-semibold border-b border-gray-200 ${

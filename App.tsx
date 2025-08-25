@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ownerOptions,
   phaseOptions,
@@ -15,14 +15,15 @@ import { SettingsTab } from "./components/SettingsTab";
 import { EditTaskModal } from "./components/EditTaskModal";
 import { v4 as uuidv4 } from "uuid";
 import { CreateProjectModal } from "./components/CreateProjectModal";
-import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
+import { ConfirmDeleteModal } from "./components/ConfirmDeleteModal";
+import { CreateTaskModal } from "./components/CreateTaskModal";
 
 /**
  * IMPORTANT: Replace this placeholder with your actual Google Apps Script Web App URL.
  */
 const SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbx1ESg7JPRexdgQ8PXQ5bOrvGWuS9SknmSqjoc7AwGlKGxtO-kwu7vJE0CwkSIiCrhz/exec";
-// react-v-11
+  "https://script.google.com/macros/s/AKfycbxtBffm3-i9FuHVwBZx5GAqwc3dAtjw_xpliLhR8ylHQl72eYBhMaFqkpOw4hzWSk-c/exec";
+// react-v-12
 
 const LoadingIndicator: React.FC<{ message: string }> = ({ message }) => (
   <div className="flex flex-col items-center justify-center h-full">
@@ -81,45 +82,135 @@ const App = () => {
   const [initialTasks, setInitialTasks] = useState<Task[]>([]);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{ type: 'task' | 'project', data: any } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{
+    type: "task" | "project";
+    data: any;
+  } | null>(null);
 
-  const openDeleteModal = (type: 'task' | 'project', data: any) => {
-        setItemToDelete({ type, data });
-        setIsDeleteModalOpen(true);
-    };
+  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+  const [phaseForNewTask, setPhaseForNewTask] = useState<string | null>(null);
 
-  const handleConfirmDelete = async () => {
-        if (!itemToDelete) return;
-        
-        setLoadingMessage("กำลังลบข้อมูล...");
-        const { type, data } = itemToDelete;
-        
+  const fetchTasks = useCallback(async () => {
+        if (!selectedProjectId) {
+            setTasks([]);
+            return;
+        }
+
+        setLoadingMessage(`กำลังโหลด Task ของ ${selectedProjectId}...`);
+        setError(null);
         try {
-            const op = type === 'task' ? 'deleteTask' : 'deleteProject';
-            const body = type === 'task' 
-                ? { op, rowIndex: data.rowIndex } 
-                : { op, projectId: data.ProjectID };
+            const res = await fetch(`${SCRIPT_URL}?op=getTasks&projectId=${selectedProjectId}`);
+            if (!res.ok) throw new Error(`ไม่สามารถโหลด Task ได้ (HTTP ${res.status})`);
+            
+            const data = await res.json();
+            if (!Array.isArray(data)) throw new Error("ข้อมูล Task ที่ได้รับไม่ถูกต้อง");
 
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify(body),
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
+            const phaseOrder = [
+                "Research & Planning", "Strategy & Positioning", "Content Preparation",
+                "Pre-Launch", "Launch Day", "Post-Launch", "Measurement & Optimization",
+            ];
+
+            const sortedData = [...data].sort((a, b) => {
+                const phaseAIndex = phaseOrder.indexOf(a.Phase);
+                const phaseBIndex = phaseOrder.indexOf(b.Phase);
+                if (phaseAIndex === phaseBIndex) return 0;
+                return phaseAIndex - phaseBIndex;
             });
 
-            if (type === 'task') {
-                setTasks(prev => prev.filter(t => t._id !== data._id));
-            } else { // project
-                await fetchProjects(); // โหลดโปรเจกต์ใหม่ทั้งหมด
-            }
+            const formattedTasks: Task[] = sortedData.map((t: any, index: number) => ({
+                _id: `${t.ProjectID}-${t.rowIndex}-${index}`,
+                rowIndex: t.rowIndex,
+                ProjectID: t.ProjectID,
+                Check: t["Check ✅"] === true || String(t["Check ✅"]).toLowerCase() === "true",
+                Phase: t.Phase,
+                Task: t.Task,
+                Owner: t.Owner,
+                Deadline: t.Deadline ? new Date(t.Deadline).toISOString().split("T")[0] : "",
+                Status: t.Status,
+                "Est. Hours": Number(t["Est. Hours"]) || 0,
+                "Actual Hours": t["Actual Hours"] ? Number(t["Actual Hours"]) : null,
+                "Impact Score": Number(t["Impact Score"]) || 0,
+                Timeliness: t.Timeliness,
+                "Notes / Result": t["Notes / Result"],
+                "Feedback to Team": t["Feedback to Team"],
+                "Owner Feedback": t["Owner Feedback"],
+                "Project Feedback": t["Project Feedback"],
+                MilestoneID: t.MilestoneID,
+            }));
 
+            setTasks(formattedTasks);
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoadingMessage(null);
-            setIsDeleteModalOpen(false);
-            setItemToDelete(null);
+        }
+    }, [selectedProjectId]);
+
+  const openDeleteModal = (type: "task" | "project", data: any) => {
+    setItemToDelete({ type, data });
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleOpenCreateTaskModal = (phase: string) => {
+        setPhaseForNewTask(phase);
+        setIsCreateTaskModalOpen(true);
+    };
+    const handleCreateTask = async (newTaskData: Omit<Task, 'rowIndex' | '_id' | 'Check'>) => {
+        if (!selectedProjectId) return;
+
+        setLoadingMessage("กำลังสร้าง Task ใหม่...");
+        try {
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    op: 'createTask',
+                    taskData: { ...newTaskData, ProjectID: selectedProjectId }
+                }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+            });
+            // โหลด Task ใหม่อีกครั้งเพื่อให้แสดงผลล่าสุด
+            await fetchTasks();
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoadingMessage(null);
+            setIsCreateTaskModalOpen(false);
         }
     };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+
+    setLoadingMessage("กำลังลบข้อมูล...");
+    const { type, data } = itemToDelete;
+
+    try {
+      const op = type === "task" ? "deleteTask" : "deleteProject";
+      const body =
+        type === "task"
+          ? { op, rowIndex: data.rowIndex }
+          : { op, projectId: data.ProjectID };
+
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(body),
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+      });
+
+      if (type === "task") {
+        setTasks((prev) => prev.filter((t) => t._id !== data._id));
+      } else {
+        // project
+        await fetchProjects(); // โหลดโปรเจกต์ใหม่ทั้งหมด
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoadingMessage(null);
+      setIsDeleteModalOpen(false);
+      setItemToDelete(null);
+    }
+  };
 
   const fetchProjects = async () => {
     if (SCRIPT_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) {
@@ -156,6 +247,11 @@ const App = () => {
       setLoadingMessage(null);
     }
   };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
 
   useEffect(() => {
     fetchProjects();
@@ -475,12 +571,22 @@ const App = () => {
             filteredTasks={filteredTasks}
             onEditTask={handleEditClick}
             onTaskView={handleViewClick}
-            onDeleteTask={(taskId) => openDeleteModal('task', tasks.find(t => t._id === taskId))}
+            onDeleteTask={(taskId) =>
+              openDeleteModal(
+                "task",
+                tasks.find((t) => t._id === taskId)
+              )
+            }
+            onOpenCreateTask={handleOpenCreateTaskModal}
           />
         );
       case "projects":
-        return (<ProjectsTab projects={projects}
-          onDeleteProject={(project) => openDeleteModal('project', project)} />);
+        return (
+          <ProjectsTab
+            projects={projects}
+            onDeleteProject={(project) => openDeleteModal("project", project)}
+          />
+        );
       case "config":
         return (
           <SettingsTab
@@ -551,6 +657,13 @@ const App = () => {
         initialTasks={initialTasks}
         isLoading={!!loadingMessage}
       />
+      <CreateTaskModal
+                isOpen={isCreateTaskModalOpen}
+                onClose={() => setIsCreateTaskModalOpen(false)}
+                onCreate={handleCreateTask}
+                initialPhase={phaseForNewTask}
+                isLoading={!!loadingMessage}
+            />
       {(isEditModalOpen || isViewModalOpen) && currentTask && (
         <EditTaskModal
           isOpen={isEditModalOpen || isViewModalOpen}
@@ -561,22 +674,24 @@ const App = () => {
           onNavigate={handleNavigateTask}
           canNavigatePrev={currentIndex !== null && currentIndex > 0}
           canNavigateNext={
-            currentIndex !== null && currentIndex < tasks.length - 1
+          currentIndex !== null && currentIndex < tasks.length - 1
           }
         />
       )}
       <ConfirmDeleteModal
-                isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={handleConfirmDelete}
-                title={`ยืนยันการลบ ${itemToDelete?.type === 'project' ? 'โปรเจกต์' : 'Task'}`}
-                message={
-                    itemToDelete?.type === 'project'
-                    ? `คุณแน่ใจหรือไม่ว่าต้องการลบโปรเจกต์ "${itemToDelete?.data.Name}"? การกระทำนี้จะลบ Task ทั้งหมดที่เกี่ยวข้องและไม่สามารถย้อนกลับได้`
-                    : `คุณแน่ใจหรือไม่ว่าต้องการลบ Task "${itemToDelete?.data.Task}"?`
-                }
-                isLoading={!!loadingMessage}
-            />
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title={`ยืนยันการลบ ${
+          itemToDelete?.type === "project" ? "โปรเจกต์" : "Task"
+        }`}
+        message={
+          itemToDelete?.type === "project"
+            ? `คุณแน่ใจหรือไม่ว่าต้องการลบโปรเจกต์ "${itemToDelete?.data.Name}"? การกระทำนี้จะลบ Task ทั้งหมดที่เกี่ยวข้องและไม่สามารถย้อนกลับได้`
+            : `คุณแน่ใจหรือไม่ว่าต้องการลบ Task "${itemToDelete?.data.Task}"?`
+        }
+        isLoading={!!loadingMessage}
+      />
     </div>
   );
 };
