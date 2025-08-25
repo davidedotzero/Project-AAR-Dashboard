@@ -1,36 +1,84 @@
 import React, { useState, useMemo, useEffect } from "react";
 import type { Task } from "../types";
-import { statusColorMap, phaseColorMap, phaseOptions } from "../constants";
+import { statusColorMap, phaseColorMap, phaseOptions, ownerOptions } from "../constants";
 import { EditIcon, ChevronDownIcon, ViewIcon, DeleteIcon } from "./icons"; // <-- เพิ่ม ViewIcon ด้วย
+import { TaskFilters } from "./TaskFilters";
+import { DeadlineAlert } from "./DeadlineAlert";
 
 interface TasksTabProps {
-  filteredTasks: Task[]; // <-- เปลี่ยน prop เป็น tasks (ข้อมูลดิบ)
+  filteredTasks: Task[];
+  tasks: Task[];
   onEditTask: (task: Task) => void;
   onTaskView: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
 }
 
 export const TasksTab: React.FC<TasksTabProps> = ({
-  filteredTasks,
+  tasks,
+  // filteredTasks,
   onEditTask,
   onTaskView,
   onDeleteTask,
 }) => {
+  const tasksCountByOwner = useMemo(() => {
+    if (!tasks) return {};
+    const counts: { [key: string]: number } = {};
+    ownerOptions.forEach(owner => {
+      const activeTasks = tasks.filter(task => task.Owner === owner && task.Status !== 'Done').length;
+      if (activeTasks > 0) {
+        counts[owner] = activeTasks;
+      }
+    });
+    return counts;
+  }, [tasks]);
+
   // --- ส่วนที่ 1: Hooks และ Logic (ถูกต้องแล้ว) ---
+  const [filters, setFilters] = useState<{ [key: string]: string }>({});
   const [expandedPhases, setExpandedPhases] = useState<{
     [key: string]: boolean;
   }>({});
 
+  const handleFilterChange = (field: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const filteredTasks = useMemo(() => {
+        if (!tasks) return [];
+        
+        return tasks.filter((task: Task) => {
+            const activeFilterKeys = Object.keys(filters).filter(key => filters[key]);
+
+            if (activeFilterKeys.length === 0) {
+                return true;
+            }
+            return activeFilterKeys.every(field => {
+                const filterValue = filters[field].toLowerCase();
+                const taskValue = task[field as keyof Task];
+
+                if (taskValue === null || taskValue === undefined) {
+                    return false;
+                }
+                
+                const taskValueString = String(taskValue).toLowerCase();
+                if (field === 'Owner' || field === 'Status' || field === 'Phase') {
+                    return taskValueString === filterValue;
+                } else {
+                    return taskValueString.includes(filterValue);
+                }
+            });
+        });
+    }, [tasks, filters]);
+
   const tasksByPhase = useMemo(() => {
-    const grouped: { [key: string]: Task[] } = {};
-    phaseOptions.forEach((phase) => {
-      const tasksInPhase = filteredTasks.filter((task) => task.Phase === phase);
-      if (tasksInPhase.length > 0) {
-        grouped[phase] = tasksInPhase;
-      }
-    });
-    return grouped;
-  }, [filteredTasks]);
+        const grouped: { [key: string]: Task[] } = {};
+        phaseOptions.forEach(phase => {
+            const tasksInPhase = filteredTasks.filter(task => task.Phase === phase);
+            if (tasksInPhase.length > 0) {
+                grouped[phase] = tasksInPhase;
+            }
+        });
+        return grouped;
+    }, [filteredTasks]);
 
   useEffect(() => {
     if (Object.keys(tasksByPhase).length > 0) {
@@ -51,6 +99,25 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   // --- ส่วนที่ 2: Return JSX (นำโค้ดทั้งหมดมารวมในนี้) ---
   return (
     <div>
+      <TaskFilters filters={filters} onFilterChange={handleFilterChange} />
+
+      <div className="mb-6 p-4 bg-white border rounded-xl shadow-sm">
+        <h3 className="text-md font-bold text-gray-700 mb-3">สรุป Task ที่ต้องดำเนินการ (Active)</h3>
+        <div className="flex flex-wrap gap-3">
+          {Object.keys(tasksCountByOwner).length > 0 ? (
+             Object.entries(tasksCountByOwner).map(([owner, count]) => (
+                <div key={owner} className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 rounded-full">
+                  <span className="font-semibold text-gray-800 text-sm">{owner}:</span>
+                  <span className="font-bold text-orange-600 text-lg">{count}</span>
+                  <span className="text-gray-500 text-sm">Tasks</span>
+                </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500">ไม่มี Task ที่ต้องดำเนินการในขณะนี้</p>
+          )}
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <table className="w-full text-sm text-left text-gray-600">
           <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
@@ -122,7 +189,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                           </span>
                         </td>
                         <td className="px-6 py-4 border-b border-gray-200">
-                          {task.Deadline}
+                          <DeadlineAlert deadline={task.Deadline} status={task.Status} />
                         </td>
                         <td
                           className={`px-6 py-4 font-semibold border-b border-gray-200 ${

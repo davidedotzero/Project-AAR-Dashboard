@@ -471,6 +471,7 @@ const App = () => {
       case "tasks":
         return (
           <TasksTab
+            tasks={tasks}
             filteredTasks={filteredTasks}
             onEditTask={handleEditClick}
             onTaskView={handleViewClick}
