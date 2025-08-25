@@ -26,4 +26,5 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   }
+  // ไม่มี "references" แล้ว
 }

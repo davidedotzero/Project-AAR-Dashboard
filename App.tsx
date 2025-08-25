@@ -21,8 +21,7 @@ import { CreateTaskModal } from "./components/CreateTaskModal";
 /**
  * IMPORTANT: Replace this placeholder with your actual Google Apps Script Web App URL.
  */
-const SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxtBffm3-i9FuHVwBZx5GAqwc3dAtjw_xpliLhR8ylHQl72eYBhMaFqkpOw4hzWSk-c/exec";
+const SCRIPT_URL = import.meta.env.VITE_APP_SCRIPT_URL;
 // react-v-12
 
 const LoadingIndicator: React.FC<{ message: string }> = ({ message }) => (
