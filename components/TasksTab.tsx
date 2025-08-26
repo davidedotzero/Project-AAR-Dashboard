@@ -142,7 +142,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <table className="w-full text-sm text-left text-gray-600">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
+          <thead className="hidden md:table-header-group text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
             <tr>
               <th scope="col" className="px-6 py-4 font-medium">
                 Task
@@ -210,7 +210,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                     tasksInPhase.map((task) => (
                       <tr
                         key={task._id}
-                        className="bg-white hover:bg-orange-50 transition-colors duration-200"
+                        className="hidden md:table-row bg-white hover:bg-orange-50 transition-colors duration-200"
                       >
                         <td className="px-6 py-4 font-medium text-gray-900 border-b border-gray-200">
                           {task.Task}

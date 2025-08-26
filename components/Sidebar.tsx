@@ -42,6 +42,8 @@ interface SidebarProps {
   setFilterTeam: (team: string) => void;
   ownerOptions: string[];
   onOpenCreateProject: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -51,9 +53,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setFilterTeam,
   ownerOptions,
   onOpenCreateProject,
+  isOpen,
+  onClose,
 }) => {
   return (
-    <aside className="w-1/4 max-w-xs bg-white p-6 flex flex-col border-r border-gray-200 shadow-sm">
+    <>
+    {/* Backdrop for mobile */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          onClick={onClose}
+        ></div>
+      )}
+    <aside className={`fixed top-0 left-0 h-full w-3/4 max-w-xs bg-white p-6 flex flex-col border-r border-gray-200 shadow-lg z-40 
+                       transform transition-transform duration-300 ease-in-out 
+                       md:relative md:translate-x-0 md:shadow-none
+                       ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
       <h1 className="text-2xl font-bold text-gray-800 mb-2">แดชบอร์ด</h1>
       <p className="text-gray-500 mb-8">ภาพรวมโปรเจกต์และการดำเนินงาน</p>
 
@@ -119,5 +135,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
     </aside>
+    </>
   );
 };

@@ -17,6 +17,7 @@ import { v4 as uuidv4 } from "uuid";
 import { CreateProjectModal } from "./components/CreateProjectModal";
 import { ConfirmDeleteModal } from "./components/ConfirmDeleteModal";
 import { CreateTaskModal } from "./components/CreateTaskModal";
+import { MenuIcon } from "./components/icons";
 
 /**
  * IMPORTANT: Replace this placeholder with your actual Google Apps Script Web App URL.
@@ -89,61 +90,63 @@ const App = () => {
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [phaseForNewTask, setPhaseForNewTask] = useState<string | null>(null);
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   const fetchTasks = useCallback(async () => {
-        if (!selectedProjectId) {
-            setTasks([]);
-            return;
-        }
+    if (!selectedProjectId) {
+      setTasks([]);
+      return;
+    }
 
-        setLoadingMessage(`กำลังโหลด Task ของ ${selectedProjectId}...`);
-        setError(null);
-        try {
-            const res = await fetch(`${SCRIPT_URL}?op=getTasks&projectId=${selectedProjectId}`);
-            if (!res.ok) throw new Error(`ไม่สามารถโหลด Task ได้ (HTTP ${res.status})`);
-            
-            const data = await res.json();
-            if (!Array.isArray(data)) throw new Error("ข้อมูล Task ที่ได้รับไม่ถูกต้อง");
+    setLoadingMessage(`กำลังโหลด Task ของ ${selectedProjectId}...`);
+    setError(null);
+    try {
+      const res = await fetch(`${SCRIPT_URL}?op=getTasks&projectId=${selectedProjectId}`);
+      if (!res.ok) throw new Error(`ไม่สามารถโหลด Task ได้ (HTTP ${res.status})`);
 
-            const phaseOrder = [
-                "Research & Planning", "Strategy & Positioning", "Content Preparation",
-                "Pre-Launch", "Launch Day", "Post-Launch", "Measurement & Optimization",
-            ];
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error("ข้อมูล Task ที่ได้รับไม่ถูกต้อง");
 
-            const sortedData = [...data].sort((a, b) => {
-                const phaseAIndex = phaseOrder.indexOf(a.Phase);
-                const phaseBIndex = phaseOrder.indexOf(b.Phase);
-                if (phaseAIndex === phaseBIndex) return 0;
-                return phaseAIndex - phaseBIndex;
-            });
+      const phaseOrder = [
+        "Research & Planning", "Strategy & Positioning", "Content Preparation",
+        "Pre-Launch", "Launch Day", "Post-Launch", "Measurement & Optimization",
+      ];
 
-            const formattedTasks: Task[] = sortedData.map((t: any, index: number) => ({
-                _id: `${t.ProjectID}-${t.rowIndex}-${index}`,
-                rowIndex: t.rowIndex,
-                ProjectID: t.ProjectID,
-                Check: t["Check ✅"] === true || String(t["Check ✅"]).toLowerCase() === "true",
-                Phase: t.Phase,
-                Task: t.Task,
-                Owner: t.Owner,
-                Deadline: t.Deadline ? new Date(t.Deadline).toISOString().split("T")[0] : "",
-                Status: t.Status,
-                "Est. Hours": Number(t["Est. Hours"]) || 0,
-                "Actual Hours": t["Actual Hours"] ? Number(t["Actual Hours"]) : null,
-                "Impact Score": Number(t["Impact Score"]) || 0,
-                Timeliness: t.Timeliness,
-                "Notes / Result": t["Notes / Result"],
-                "Feedback to Team": t["Feedback to Team"],
-                "Owner Feedback": t["Owner Feedback"],
-                "Project Feedback": t["Project Feedback"],
-                MilestoneID: t.MilestoneID,
-            }));
+      const sortedData = [...data].sort((a, b) => {
+        const phaseAIndex = phaseOrder.indexOf(a.Phase);
+        const phaseBIndex = phaseOrder.indexOf(b.Phase);
+        if (phaseAIndex === phaseBIndex) return 0;
+        return phaseAIndex - phaseBIndex;
+      });
 
-            setTasks(formattedTasks);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoadingMessage(null);
-        }
-    }, [selectedProjectId]);
+      const formattedTasks: Task[] = sortedData.map((t: any, index: number) => ({
+        _id: `${t.ProjectID}-${t.rowIndex}-${index}`,
+        rowIndex: t.rowIndex,
+        ProjectID: t.ProjectID,
+        Check: t["Check ✅"] === true || String(t["Check ✅"]).toLowerCase() === "true",
+        Phase: t.Phase,
+        Task: t.Task,
+        Owner: t.Owner,
+        Deadline: t.Deadline ? new Date(t.Deadline).toISOString().split("T")[0] : "",
+        Status: t.Status,
+        "Est. Hours": Number(t["Est. Hours"]) || 0,
+        "Actual Hours": t["Actual Hours"] ? Number(t["Actual Hours"]) : null,
+        "Impact Score": Number(t["Impact Score"]) || 0,
+        Timeliness: t.Timeliness,
+        "Notes / Result": t["Notes / Result"],
+        "Feedback to Team": t["Feedback to Team"],
+        "Owner Feedback": t["Owner Feedback"],
+        "Project Feedback": t["Project Feedback"],
+        MilestoneID: t.MilestoneID,
+      }));
+
+      setTasks(formattedTasks);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoadingMessage(null);
+    }
+  }, [selectedProjectId]);
 
   const openDeleteModal = (type: "task" | "project", data: any) => {
     setItemToDelete({ type, data });
@@ -151,31 +154,31 @@ const App = () => {
   };
 
   const handleOpenCreateTaskModal = (phase: string) => {
-        setPhaseForNewTask(phase);
-        setIsCreateTaskModalOpen(true);
-    };
-    const handleCreateTask = async (newTaskData: Omit<Task, 'rowIndex' | '_id' | 'Check'>) => {
-        if (!selectedProjectId) return;
+    setPhaseForNewTask(phase);
+    setIsCreateTaskModalOpen(true);
+  };
+  const handleCreateTask = async (newTaskData: Omit<Task, 'rowIndex' | '_id' | 'Check'>) => {
+    if (!selectedProjectId) return;
 
-        setLoadingMessage("กำลังสร้าง Task ใหม่...");
-        try {
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    op: 'createTask',
-                    taskData: { ...newTaskData, ProjectID: selectedProjectId }
-                }),
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-            });
-            // โหลด Task ใหม่อีกครั้งเพื่อให้แสดงผลล่าสุด
-            await fetchTasks();
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoadingMessage(null);
-            setIsCreateTaskModalOpen(false);
-        }
-    };
+    setLoadingMessage("กำลังสร้าง Task ใหม่...");
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          op: 'createTask',
+          taskData: { ...newTaskData, ProjectID: selectedProjectId }
+        }),
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+      });
+      // โหลด Task ใหม่อีกครั้งเพื่อให้แสดงผลล่าสุด
+      await fetchTasks();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoadingMessage(null);
+      setIsCreateTaskModalOpen(false);
+    }
+  };
 
   const handleConfirmDelete = async () => {
     if (!itemToDelete) return;
@@ -493,12 +496,10 @@ const App = () => {
   };
 
   const tabTitles: { [key: string]: string } = {
-    aar: `สรุปผล: ${
-      projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
-    }`,
-    tasks: `รายการ Task: ${
-      projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
-    }`,
+    aar: `สรุปผล: ${projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
+      }`,
+    tasks: `รายการ Task: ${projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
+      }`,
     projects: "โปรเจกต์ทั้งหมด",
     config: "ตั้งค่า",
     create: "สร้างโปรเจกต์ใหม่",
@@ -608,13 +609,23 @@ const App = () => {
         setFilterTeam={setFilterTeam}
         ownerOptions={ownerOptions}
         onOpenCreateProject={() => setIsCreateModalOpen(true)}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
       <main className="w-3/4 p-8 overflow-y-auto flex flex-col">
         <header className="flex justify-between items-center mb-6 pb-6 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-3xl font-bold text-gray-800 truncate pr-4">
-            {tabTitles[activeTab]}
-          </h2>
+          <div className="flex items-center">
+            <button
+              className="p-2 mr-2 text-gray-600 hover:text-orange-500 md:hidden"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <MenuIcon />
+            </button>
+            <h2 className="text-3xl font-bold text-gray-800 truncate pr-4">
+              {tabTitles[activeTab]}
+            </h2>
+          </div>
           <div className="flex items-center space-x-2 flex-shrink-0">
             <label
               htmlFor="project-selector"
@@ -657,12 +668,12 @@ const App = () => {
         isLoading={!!loadingMessage}
       />
       <CreateTaskModal
-                isOpen={isCreateTaskModalOpen}
-                onClose={() => setIsCreateTaskModalOpen(false)}
-                onCreate={handleCreateTask}
-                initialPhase={phaseForNewTask}
-                isLoading={!!loadingMessage}
-            />
+        isOpen={isCreateTaskModalOpen}
+        onClose={() => setIsCreateTaskModalOpen(false)}
+        onCreate={handleCreateTask}
+        initialPhase={phaseForNewTask}
+        isLoading={!!loadingMessage}
+      />
       {(isEditModalOpen || isViewModalOpen) && currentTask && (
         <EditTaskModal
           isOpen={isEditModalOpen || isViewModalOpen}
@@ -673,7 +684,7 @@ const App = () => {
           onNavigate={handleNavigateTask}
           canNavigatePrev={currentIndex !== null && currentIndex > 0}
           canNavigateNext={
-          currentIndex !== null && currentIndex < tasks.length - 1
+            currentIndex !== null && currentIndex < tasks.length - 1
           }
         />
       )}
@@ -681,9 +692,8 @@ const App = () => {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
-        title={`ยืนยันการลบ ${
-          itemToDelete?.type === "project" ? "โปรเจกต์" : "Task"
-        }`}
+        title={`ยืนยันการลบ ${itemToDelete?.type === "project" ? "โปรเจกต์" : "Task"
+          }`}
         message={
           itemToDelete?.type === "project"
             ? `คุณแน่ใจหรือไม่ว่าต้องการลบโปรเจกต์ "${itemToDelete?.data.Name}"? การกระทำนี้จะลบ Task ทั้งหมดที่เกี่ยวข้องและไม่สามารถย้อนกลับได้`

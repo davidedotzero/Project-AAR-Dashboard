@@ -66,7 +66,7 @@ export const AarTab: React.FC<AarTabProps> = ({ operationScore, efficiencyRatio,
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div className="lg:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <div className="lg:col-span-3 bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200">
                     <h3 className="font-bold text-gray-700 mb-4">ภาพรวมสถานะ Task</h3>
                     <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={tasksByStatus} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
@@ -78,7 +78,7 @@ export const AarTab: React.FC<AarTabProps> = ({ operationScore, efficiencyRatio,
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
-                <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200">
                     <h3 className="font-bold text-gray-700 mb-4">สัดส่วน Task ตามทีม</h3>
                     <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
