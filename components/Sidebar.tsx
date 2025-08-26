@@ -104,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       </nav>
 
-      <div className="mt-auto pt-6 border-t border-gray-200">
+      {/* <div className="mt-auto pt-6 border-t border-gray-200">
         <label
           htmlFor="feedback-filter"
           className="block text-sm font-medium text-gray-700 mb-2"
@@ -124,7 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </option>
           ))}
         </select>
-      </div>
+      </div> */}
       <div className="mt-auto pt-6 border-t border-gray-200">
         <button
             onClick={onOpenCreateProject}
