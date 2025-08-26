@@ -140,9 +140,11 @@ export const TasksTab: React.FC<TasksTabProps> = ({
         </div>
       </div>
 
+      {/* เปลี่ยนแค่ส่วน Table นี้ */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <table className="w-full text-sm text-left text-gray-600">
-          <thead className="hidden md:table-header-group text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
+        <table className="w-full text-sm">
+          {/* Header ของตาราง (จะถูกซ่อนบนมือถือ) */}
+          <thead className="hidden md:table-header-group text-xs text-gray-700 uppercase bg-gray-50">
             <tr>
               <th scope="col" className="px-6 py-4 font-medium">
                 Task
@@ -161,7 +163,9 @@ export const TasksTab: React.FC<TasksTabProps> = ({
               </th>
             </tr>
           </thead>
-          <tbody>
+
+          {/* Body ของตาราง */}
+          <tbody className="divide-y md:divide-y-0 divide-gray-200">
             {Object.entries(tasksByPhase).map(([phase, tasksInPhase]) => {
               if (!Array.isArray(tasksInPhase)) {
                 return null;
@@ -169,13 +173,14 @@ export const TasksTab: React.FC<TasksTabProps> = ({
               const isExpanded = !!expandedPhases[phase];
               return (
                 <React.Fragment key={phase}>
+                  {/* แถว Header ของแต่ละ Phase (แสดงทุกขนาดหน้าจอ) */}
                   <tr
                     className="bg-gray-50 hover:bg-gray-100 border-b border-t border-gray-200 cursor-pointer"
                     onClick={() => togglePhase(phase)}
                   >
                     <td colSpan={5} className="px-4 py-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center">
+                        <div className="flex items-center justify-between">
                           <span
                             className={`px-2.5 py-1 text-xs font-semibold rounded-full ${phaseColorMap[phase]?.bg} ${phaseColorMap[phase]?.text}`}
                           >
@@ -206,61 +211,125 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                     </td>
                   </tr>
 
+                  {/* แสดง Task แต่ละรายการ (เมื่อกลุ่มถูกขยาย) */}
                   {isExpanded &&
                     tasksInPhase.map((task) => (
-                      <tr
-                        key={task._id}
-                        className="hidden md:table-row bg-white hover:bg-orange-50 transition-colors duration-200"
-                      >
-                        <td className="px-6 py-4 font-medium text-gray-900 border-b border-gray-200">
-                          {task.Task}
-                        </td>
-                        <td className="px-6 py-4 border-b border-gray-200">
-                          <span className="px-2.5 py-1 text-xs font-semibold text-orange-800 bg-orange-100 rounded-full">
-                            {task.Owner}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 border-b border-gray-200">
-                          <DeadlineAlert
-                            deadline={task.Deadline}
-                            status={task.Status}
-                          />
-                        </td>
-                        <td
-                          className={`px-6 py-4 font-semibold border-b border-gray-200 ${
-                            statusColorMap[task.Status] || "text-gray-500"
-                          }`}
+                      <React.Fragment key={task._id}>
+                        {/* ----- 1. มุมมอง Desktop (Table Row) ----- */}
+                        <tr
+                          key={task._id}
+                          className="hidden md:table-row bg-white hover:bg-orange-50"
                         >
-                          {task.Status}
-                        </td>
+                          <td className="px-6 py-4 font-medium text-gray-900 border-b">
+                            {task.Task}
+                          </td>
+                          <td className="px-6 py-4 border-b">
+                            <span className="px-2.5 py-1 text-xs font-semibold text-orange-800 bg-orange-100 rounded-full">
+                              {task.Owner}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 border-b">
+                            <DeadlineAlert
+                              deadline={task.Deadline}
+                              status={task.Status}
+                            />
+                          </td>
 
-                        {/* --- นี่คือส่วนปุ่ม Actions ที่คุณยกมา --- */}
-                        <td className="px-4 py-4 text-center border-b border-gray-200">
-                          <div className="flex items-center justify-center space-x-1">
-                            <button
-                              onClick={() => onTaskView(task)}
-                              className="text-gray-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-100"
-                              aria-label="View Task"
-                            >
-                              <ViewIcon />
-                            </button>
-                            <button
-                              onClick={() => onEditTask(task)}
-                              className="text-gray-500 hover:text-orange-600 p-2 rounded-full hover:bg-orange-100"
-                              aria-label="Edit Task"
-                            >
-                              <EditIcon />
-                            </button>
-                            <button
-                              onClick={() => onDeleteTask(task._id)}
-                              className="text-gray-500 hover:text-red-600 p-2 rounded-full hover:bg-red-100"
-                              aria-label="Delete Task"
-                            >
-                              <DeleteIcon />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                          <td
+                            className={`px-6 py-4 font-semibold border-b ${
+                              statusColorMap[task.Status] || "text-gray-500"
+                            }`}
+                          >
+                            {task.Status}
+                          </td>
+
+                          <td className="px-4 py-4 text-center border-b border-gray-200">
+                            <div className="flex items-center justify-center space-x-1">
+                              <button
+                                onClick={() => onTaskView(task)}
+                                className="text-gray-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-100"
+                                aria-label="View Task"
+                              >
+                                <ViewIcon />
+                              </button>
+                              <button
+                                onClick={() => onEditTask(task)}
+                                className="text-gray-500 hover:text-orange-600 p-2 rounded-full hover:bg-orange-100"
+                                aria-label="Edit Task"
+                              >
+                                <EditIcon />
+                              </button>
+                              <button
+                                onClick={() => onDeleteTask(task._id)}
+                                className="text-gray-500 hover:text-red-600 p-2 rounded-full hover:bg-red-100"
+                                aria-label="Delete Task"
+                              >
+                                <DeleteIcon />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {/* ----- 2. มุมมอง Mobile (Card) ----- */}
+                        <tr className="md:hidden">
+                          <td colSpan={5} className="p-4">
+                            <div className="space-y-3">
+                              <p className="font-bold text-gray-800">
+                                {task.Task}
+                              </p>
+                              <div className="grid grid-cols-2 gap-3 text-xs">
+                                <div>
+                                  <p className="text-gray-500 mb-1">OWNER</p>
+                                  <span className="px-2.5 py-1 text-xs ...">
+                                    {task.Owner}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 mb-1">STATUS</p>
+                                  <p
+                                    className={`font-semibold ${
+                                      statusColorMap[task.Status] ||
+                                      "text-gray-500"
+                                    }`}
+                                  >
+                                    {task.Status}
+                                  </p>
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-gray-500 mb-1 text-xs">
+                                  DEADLINE
+                                </p>
+                                <DeadlineAlert
+                                  deadline={task.Deadline}
+                                  status={task.Status}
+                                />
+                              </div>
+                              <div className="flex justify-end pt-2 border-t mt-3">
+                                <div className="flex items-center justify-center space-x-1">
+                                  <button
+                                    onClick={() => onTaskView(task)}
+                                    className="..."
+                                  >
+                                    <ViewIcon />
+                                  </button>
+                                  <button
+                                    onClick={() => onEditTask(task)}
+                                    className="..."
+                                  >
+                                    <EditIcon />
+                                  </button>
+                                  <button
+                                    onClick={() => onDeleteTask(task)}
+                                    className="..."
+                                  >
+                                    <DeleteIcon />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      </React.Fragment>
                     ))}
                 </React.Fragment>
               );
