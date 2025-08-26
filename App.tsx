@@ -495,6 +495,11 @@ const App = () => {
     }
   };
 
+  const handleProjectSelect = (projectId: string) => {
+        setSelectedProjectId(projectId);
+        setActiveTab('tasks');
+    };
+
   const tabTitles: { [key: string]: string } = {
     aar: `สรุปผล: ${projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
       }`,
@@ -584,6 +589,7 @@ const App = () => {
         return (
           <ProjectsTab
             projects={projects}
+            onSelectProject={handleProjectSelect}
             onDeleteProject={(project) => openDeleteModal("project", project)}
           />
         );
