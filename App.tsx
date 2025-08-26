@@ -62,7 +62,7 @@ const ErrorDisplay: React.FC<{ message: string }> = ({ message }) => (
 );
 
 const App = () => {
-  const [activeTab, setActiveTab] = useState("aar");
+  const [activeTab, setActiveTab] = useState("projects");
   const [filterTeam, setFilterTeam] = useState("ALL");
 
   const [projects, setProjects] = useState<Project[]>([]);
