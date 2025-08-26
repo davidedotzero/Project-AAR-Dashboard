@@ -52,7 +52,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   filterTeam,
   setFilterTeam,
   ownerOptions,
-  onOpenCreateProject,
   isOpen,
   onClose,
 }) => {
@@ -104,7 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       </nav>
 
-      {/* <div className="mt-auto pt-6 border-t border-gray-200">
+      <div className="mt-auto pt-6 border-t border-gray-200">
         <label
           htmlFor="feedback-filter"
           className="block text-sm font-medium text-gray-700 mb-2"
@@ -124,8 +123,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </option>
           ))}
         </select>
-      </div> */}
-      <div className="mt-auto pt-6 border-t border-gray-200">
+      </div>
+      {/* <div className="mt-auto pt-6 border-t border-gray-200">
         <button
             onClick={onOpenCreateProject}
             className="w-full flex items-center justify-center px-4 py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition-colors duration-200 shadow-sm"
@@ -133,7 +132,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <AddProjectIcon />
             <span className="ml-2">สร้างโปรเจกต์ใหม่</span>
         </button>
-      </div>
+      </div> */}
     </aside>
     </>
   );

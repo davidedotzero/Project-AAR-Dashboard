@@ -1,10 +1,6 @@
 // App.tsx
 import React from "react";
-import {
-  ownerOptions,
-  phaseOptions,
-  statusOptions,
-} from "./constants";
+import { ownerOptions, phaseOptions, statusOptions } from "./constants";
 // Import Context Hooks (ปรับ Path ตามโครงสร้างโปรเจกต์ของคุณ)
 import { useUI } from "./contexts/UIContext";
 import { useData } from "./contexts/DataContext";
@@ -19,6 +15,9 @@ import { CreateProjectModal } from "./components/CreateProjectModal";
 import { ConfirmDeleteModal } from "./components/ConfirmDeleteModal";
 import { CreateTaskModal } from "./components/CreateTaskModal";
 import { MenuIcon } from "./components/icons";
+import { EditProjectModal } from "./components/EditProjectModal";
+
+import type { Project } from "./types";
 
 // Helper Components (ย้ายมาจากโค้ดเดิม)
 const LoadingIndicator: React.FC<{ message: string }> = ({ message }) => (
@@ -60,36 +59,80 @@ const ErrorDisplay: React.FC<{ message: string }> = ({ message }) => (
 const App = () => {
   // --- UI Context ---
   const {
-    activeTab, setActiveTab,
-    filterTeam, setFilterTeam,
-    isSidebarOpen, setIsSidebarOpen,
-    isEditModalOpen, isViewModalOpen, isCreateProjectModalOpen, isDeleteModalOpen, isCreateTaskModalOpen,
-    currentTask, currentIndex, itemToDelete, phaseForNewTask,
-    openEditModal, openViewModal, closeModals, openCreateProjectModal, openDeleteModal, openCreateTaskModal,
-    navigateTask
+    activeTab,
+    setActiveTab,
+    filterTeam,
+    setFilterTeam,
+    isSidebarOpen,
+    setIsSidebarOpen,
+    isEditModalOpen,
+    isViewModalOpen,
+    isCreateProjectModalOpen,
+    isEditProjectModalOpen,
+    isDeleteModalOpen,
+    isCreateTaskModalOpen,
+    currentTask,
+    currentIndex,
+    itemToDelete,
+    phaseForNewTask,
+    openEditModal,
+    openViewModal,
+    closeModals,
+    openCreateProjectModal,
+    currentEditingProject,
+    openDeleteModal,
+    openCreateTaskModal,
+    navigateTask,
   } = useUI();
 
   // --- Data Context ---
   const {
-    projects, tasks, initialTasks,
-    selectedProjectId, setSelectedProjectId, handleProjectSelect,
-    loadingMessage, error,
-    filteredTasks, operationScore, efficiencyRatio, onTimePerformance, tasksByStatus, tasksByOwner,
-    saveTask, createProject, createTask, confirmDelete
+    projects,
+    tasks,
+    initialTasks,
+    selectedProjectId,
+    setSelectedProjectId,
+    handleProjectSelect,
+    loadingMessage,
+    error,
+    filteredTasks,
+    operationScore,
+    efficiencyRatio,
+    onTimePerformance,
+    tasksByStatus,
+    tasksByOwner,
+    saveTask,
+    createProject,
+    updateProject,
+    createTask,
+    confirmDelete,
   } = useData();
 
+  const handleModalDeleteInitiate = (project: Project) => {
+    closeModals();
+    setTimeout(() => {
+      openDeleteModal("project", project);
+    }, 150);
+  };
 
   const tabTitles: { [key: string]: string } = {
-    aar: `สรุปผล: ${projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
-      }`,
-    tasks: `รายการ Task: ${projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
-      }`,
+    aar: `สรุปผล: ${
+      projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
+    }`,
+    tasks: `รายการ Task: ${
+      projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
+    }`,
     projects: "โปรเจกต์ทั้งหมด",
     config: "ตั้งค่า",
   };
 
   // ตรวจสอบว่ามี Modal ใดเปิดอยู่หรือไม่ เพื่อจัดการการแสดง Loading
-  const isAnyModalOpen = isEditModalOpen || isViewModalOpen || isCreateProjectModalOpen || isCreateTaskModalOpen || isDeleteModalOpen;
+  const isAnyModalOpen =
+    isEditModalOpen ||
+    isViewModalOpen ||
+    isCreateProjectModalOpen ||
+    isCreateTaskModalOpen ||
+    isDeleteModalOpen;
 
   const renderContent = () => {
     // Global Loading (แสดงเมื่อไม่มี Modal เปิด)
@@ -105,7 +148,12 @@ const App = () => {
     }
 
     // สถานะที่รอการเลือกโปรเจกต์ (เช่น ตอนโหลดครั้งแรก)
-    if (projects.length > 0 && !selectedProjectId && activeTab !== 'projects' && activeTab !== 'config') {
+    if (
+      projects.length > 0 &&
+      !selectedProjectId &&
+      activeTab !== "projects" &&
+      activeTab !== "config"
+    ) {
       return (
         <div className="text-center text-gray-500 mt-10">
           กำลังโหลดข้อมูลโปรเจกต์...
@@ -206,9 +254,7 @@ const App = () => {
               disabled={!projects.length}
               className="w-48 md:w-64 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
             >
-              {projects.length === 0 && (
-                <option value="">ไม่พบโปรเจกต์</option>
-              )}
+              {projects.length === 0 && <option value="">ไม่พบโปรเจกต์</option>}
               {projects.map((p) => (
                 <option key={p.ProjectID} value={p.ProjectID}>
                   {p.Name}
@@ -238,6 +284,16 @@ const App = () => {
         initialTasks={initialTasks}
         isLoading={!!loadingMessage}
       />
+      {isEditProjectModalOpen && currentEditingProject && (
+        <EditProjectModal
+            isOpen={isEditProjectModalOpen}
+            onClose={closeModals}
+            onUpdate={updateProject}
+            onDeleteInitiate={handleModalDeleteInitiate}
+            isLoading={!!loadingMessage}
+            project={currentEditingProject}
+        />
+      )}
       <CreateTaskModal
         isOpen={isCreateTaskModalOpen}
         onClose={closeModals}
@@ -264,8 +320,9 @@ const App = () => {
         isOpen={isDeleteModalOpen}
         onClose={closeModals}
         onConfirm={confirmDelete}
-        title={`ยืนยันการลบ ${itemToDelete?.type === "project" ? "โปรเจกต์" : "Task"
-          }`}
+        title={`ยืนยันการลบ ${
+          itemToDelete?.type === "project" ? "โปรเจกต์" : "Task"
+        }`}
         message={
           itemToDelete?.type === "project"
             ? `คุณแน่ใจหรือไม่ว่าต้องการลบโปรเจกต์ "${itemToDelete?.data.Name}"? การกระทำนี้จะลบ Task ทั้งหมดที่เกี่ยวข้องและไม่สามารถย้อนกลับได้`

@@ -5,7 +5,7 @@ import React, {
   ReactNode,
   useCallback,
 } from "react";
-import type { Task } from "../types";
+import type { Task, Project } from "../types";
 
 type itemToDelete = {
   type: "task" | "project";
@@ -25,6 +25,7 @@ interface UIContextType {
   isEditModalOpen: boolean;
   isViewModalOpen: boolean;
   isCreateProjectModalOpen: boolean;
+  isEditProjectModalOpen: boolean;
   isDeleteModalOpen: boolean;
   isCreateTaskModalOpen: boolean;
 
@@ -33,6 +34,7 @@ interface UIContextType {
   currentIndex: number | null;
   itemToDelete: itemToDelete;
   phaseForNewTask: string | null;
+  currentEditingProject: Project | null;
 
   // Actions
   openEditModal: (task: Task) => void;
@@ -41,6 +43,7 @@ interface UIContextType {
   openViewModal: (task: Task, allTasks: Task[]) => void;
   closeModal: () => void;
   openCreateProjectModal: () => void;
+  openEditProjectModal: (project: Project) => void;
   openDeleteModal: (type: "task" | "project", data: any) => void;
   openCreateTaskModal: (phase: string) => void;
 
@@ -62,6 +65,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
     useState(false);
+  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
 
@@ -70,6 +74,8 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const [itemToDelete, setItemToDelete] = useState<itemToDelete>(null);
   const [phaseForNewTask, setPhaseForNewTask] = useState<string | null>(null);
+  const [currentEditingProject, setCurrentEditingProject] =
+    useState<Project | null>(null);
 
   // --- Actions ---
 
@@ -77,12 +83,14 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsEditModalOpen(false);
     setIsViewModalOpen(false);
     setIsCreateProjectModalOpen(false);
+    setIsEditProjectModalOpen(false);
     setIsDeleteModalOpen(false);
     setIsCreateTaskModalOpen(false);
     setCurrentTask(null);
     setCurrentIndex(null);
     setItemToDelete(null);
     setPhaseForNewTask(null);
+    setCurrentEditingProject(null);
   }, []);
 
   const openEditModal = useCallback((task: Task) => {
@@ -100,10 +108,15 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsEditModalOpen(false);
   }, []);
 
-  const openCreateProjectModal = useCallback(
-    () => setIsCreateProjectModalOpen(true),
-    []
-  );
+  const openCreateProjectModal = useCallback(() => {
+    setIsCreateProjectModalOpen(true);
+    setCurrentEditingProject(null);
+  }, []);
+
+  const openEditProjectModal = useCallback((project: Project) => {
+    setCurrentEditingProject(project);
+    setIsEditProjectModalOpen(true);
+  }, []);
 
   const openDeleteModal = useCallback((type: "task" | "project", data: any) => {
     setItemToDelete({ type, data });
@@ -153,9 +166,13 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
     openViewModal,
     closeModals,
     openCreateProjectModal,
+    openEditProjectModal,
     openDeleteModal,
     openCreateTaskModal,
     navigateTask,
+
+    isEditProjectModalOpen, 
+    currentEditingProject,
   };
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
