@@ -10,8 +10,8 @@ export const ownerOptions: string[] = [
 ];
 export const statusOptions: string[] = [
   "In Progress",
-  "Assitance Needed",
   "Done",
+  "Help Me",
 ];
 export const phaseOptions: string[] = [
   "Research & Planning",

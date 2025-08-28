@@ -18,6 +18,9 @@ export interface Task {
   'Owner Feedback': string;
   'Project Feedback': string;
   MilestoneID: string;
+  HelpRequestedAt?: string;
+  HelpDetails?:string;
+  HelpAssignee?:string;
 }
 
 export interface Project {

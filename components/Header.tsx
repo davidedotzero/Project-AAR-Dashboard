@@ -87,26 +87,28 @@ export const Header: React.FC<HeaderProps> = ({
             </nav>
           </div>
 
-          {/* Right Section: Project Selector */}
-          <div className="hidden md:block">
-            <select
-              id="project-selector"
-              value={selectedProjectId || ""}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              disabled={!projects.length}
-              className="w-48 md:w-64 block px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-            >
-              {projects.length === 0 ? (
-                <option value="">ไม่พบโปรเจกต์</option>
-              ) : (
-                projects.map((p) => (
-                  <option key={p.ProjectID} value={p.ProjectID}>
-                    {p.Name}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
+          {/* Right Section: Project Selector (Conditional) */}
+          {activeTab === 'tasks' && (
+            <div className="hidden md:block ml-4">
+              <select
+                id="project-selector"
+                value={selectedProjectId || ""}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+                disabled={!projects.length}
+                className="w-48 md:w-64 block px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+              >
+                {projects.length === 0 ? (
+                  <option value="">ไม่พบโปรเจกต์</option>
+                ) : (
+                  projects.map((p) => (
+                    <option key={p.ProjectID} value={p.ProjectID}>
+                      {p.Name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          )}
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center">
@@ -125,26 +127,29 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="md:hidden">
           <nav className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
             {navLinks}
-             <div className="pt-4 pb-2 px-2">
-                 <label className="text-xs font-semibold text-gray-500">SELECT OPERATION</label>
-                <select
-                  id="mobile-project-selector"
-                  value={selectedProjectId || ""}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  disabled={!projects.length}
-                  className="w-full mt-1 block px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-                >
-                  {projects.length === 0 ? (
-                    <option value="">ไม่พบโปรเจกต์</option>
-                  ) : (
-                    projects.map((p) => (
-                      <option key={p.ProjectID} value={p.ProjectID}>
-                        {p.Name}
-                      </option>
-                    ))
-                  )}
-                </select>
-            </div>
+            {/* Mobile Project Selector (Conditional) */}
+            {activeTab === 'tasks' && (
+              <div className="pt-4 pb-2 px-2">
+                  <label className="text-xs font-semibold text-gray-500">SELECT OPERATION</label>
+                  <select
+                    id="mobile-project-selector"
+                    value={selectedProjectId || ""}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    disabled={!projects.length}
+                    className="w-full mt-1 block px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                  >
+                    {projects.length === 0 ? (
+                      <option value="">ไม่พบโปรเจกต์</option>
+                    ) : (
+                      projects.map((p) => (
+                        <option key={p.ProjectID} value={p.ProjectID}>
+                          {p.Name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+              </div>
+            )}
           </nav>
         </div>
       )}

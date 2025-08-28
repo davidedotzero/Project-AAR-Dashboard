@@ -2,7 +2,7 @@
 import React, { createContext, useState, useContext, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import type { Task, Project } from '../types';
-import { ownerOptions as allOwnerOptions , statusOptions as allstatusOptions } from '@/constants';
+import { ownerOptions as allOwnerOptions } from '../constants'; 
 
 // --- Types ---
 interface FilterSelections {
@@ -39,12 +39,10 @@ export const GlobalFilterProvider: React.FC<{ children: ReactNode }> = ({ childr
   const [selections, setSelections] = useState<FilterSelections>(INITIAL_SELECTIONS);
 
   // --- Core Logic: Faceted Search (Cascading Options) & Filtering ---
-  // คำนวณทั้งหมดใน Memo เดียว (Single-pass optimization)
   const { options, filteredTasks } = useMemo(() => {
     const { owner, projectId, status, searchQuery } = selections;
     const query = searchQuery.toLowerCase().trim();
 
-    const owners = new Set<string>();
     const projectIds = new Set<string>();
     const statuses = new Set<string>();
     const finalFilteredTasks: Task[] = [];
@@ -66,8 +64,12 @@ export const GlobalFilterProvider: React.FC<{ children: ReactNode }> = ({ childr
     for (const task of allTasks) {
         const taskOwner = task.Owner || 'Unassigned';
 
-        // Helper flags
-        const matchesOwner = !owner || taskOwner === owner;
+        // +++ START: ส่วนที่แก้ไข +++
+        // ตรวจสอบว่า Task ตรงกับ Owner ที่เลือกหรือไม่
+        // โดยเช็คทั้งช่อง Owner และช่อง HelpAssignee
+        const matchesOwner = !owner || taskOwner === owner || task.HelpAssignee === owner;
+        // +++ END: ส่วนที่แก้ไข +++
+
         const matchesProject = !projectId || task.ProjectID === projectId;
         const matchesStatus = !status || task.Status === status;
         const matchesSearchCheck = matchesSearch(task);
@@ -78,29 +80,18 @@ export const GlobalFilterProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
 
         // 2. Calculate Available Options (Cascading Logic)
-
-        // 2a. Owners (Apply Project, Status, Search filters)
-        if (matchesProject && matchesStatus && matchesSearchCheck) {
-            owners.add(taskOwner);
-        }
-
-        // 2b. Projects (Apply Owner, Status, Search filters)
         if (matchesOwner && matchesStatus && matchesSearchCheck) {
             projectIds.add(task.ProjectID);
         }
-
-        // 2c. Statuses (Apply Owner, Project, Search filters)
         if (matchesOwner && matchesProject && matchesSearchCheck) {
             if (task.Status) statuses.add(task.Status);
         }
     }
 
-    // แปลง Set เป็น Array และเรียงลำดับ
     const calculatedOptions: AvailableOptions = {
         owners: allOwnerOptions.sort(),
-        // ใช้รายชื่อโปรเจกต์หลัก (ที่เรียงตาม Priority แล้ว) และกรองเฉพาะที่มีข้อมูล
         projects: projects.filter(p => projectIds.has(p.ProjectID)),
-        statuses: allstatusOptions.sort(),
+        statuses: Array.from(statuses).sort(),
     };
 
     return { options: calculatedOptions, filteredTasks: finalFilteredTasks };
@@ -121,16 +112,11 @@ export const GlobalFilterProvider: React.FC<{ children: ReactNode }> = ({ childr
     setSelections(INITIAL_SELECTIONS);
   }, []);
 
-  // --- Auto-Reset Logic (UX Improvement) ---
-  // หากตัวเลือกที่เลือกไว้ไม่มีอยู่ใน Options ปัจจุบัน ให้ Reset ตัวเลือกนั้น
+  // --- Auto-Reset Logic ---
   useEffect(() => {
     let changed = false;
     const newSelections = { ...selections };
 
-    if (selections.owner && !options.owners.includes(selections.owner)) {
-        newSelections.owner = null;
-        changed = true;
-    }
     if (selections.projectId && !options.projects.some(p => p.ProjectID === selections.projectId)) {
         newSelections.projectId = null;
         changed = true;

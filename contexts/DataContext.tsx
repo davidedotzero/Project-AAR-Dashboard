@@ -224,6 +224,29 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, []);
 
+  const fetchAllTasks = useCallback(() => {
+    setLoadingMessage("กำลังรีเฟรชข้อมูล Task ทั้งหมด...");
+    fetch(`${SCRIPT_URL}?op=getAllTasks`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setAllTasks(data); // สมมติว่ามี state ชื่อ allTasks
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching all tasks:", error);
+        setError("ไม่สามารถโหลดข้อมูล Task ทั้งหมดได้");
+      })
+      .finally(() => {
+        setLoadingMessage(null);
+      });
+  }, []);
+
   // --- Effects ---
 
   useEffect(() => {
@@ -269,27 +292,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   }, [selectedProjectId, allTasks]);
 
   useEffect(() => {
-    const fetchAllTasks = () => {
-      fetch(`${SCRIPT_URL}?op=getAllTasks`)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Network response was not ok");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          console.log("All tasks fetched successfully:", data); // ตรวจสอบข้อมูลใน Console
-          if (Array.isArray(data)) {
-            setAllTasks(data);
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching all tasks:", error);
-          setError("ไม่สามารถโหลดข้อมูล Task ทั้งหมดได้");
-        });
-    };
     fetchAllTasks();
-  }, []);
+  }, [fetchAllTasks]);
 
   // --- Data Mutations & Actions ---
 
@@ -554,6 +558,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     selectedProjectId,
     loadingMessage,
     error,
+    fetchAllTasks,
 
     filteredTasks,
     operationScore,
