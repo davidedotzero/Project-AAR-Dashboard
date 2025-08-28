@@ -15,9 +15,13 @@ import { CreateProjectModal } from "./components/CreateProjectModal";
 import { ConfirmDeleteModal } from "./components/ConfirmDeleteModal";
 import { CreateTaskModal } from "./components/CreateTaskModal";
 import { MenuIcon } from "./components/icons";
+
 import { EditProjectModal } from "./components/EditProjectModal";
 
 import type { Project } from "./types";
+
+import { OwnerViewTab } from './components/OwnerViewTab';
+
 
 // Helper Components (ย้ายมาจากโค้ดเดิม)
 const LoadingIndicator: React.FC<{ message: string }> = ({ message }) => (
@@ -55,6 +59,8 @@ const ErrorDisplay: React.FC<{ message: string }> = ({ message }) => (
     <span className="block sm:inline">{message}</span>
   </div>
 );
+
+
 
 const App = () => {
   // --- UI Context ---
@@ -116,12 +122,13 @@ const App = () => {
   };
 
   const tabTitles: { [key: string]: string } = {
-    aar: `สรุปผล: ${
-      projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
-    }`,
-    tasks: `รายการ Task: ${
-      projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
-    }`,
+
+    aar: `สรุปผล: ${projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
+      }`,
+    tasks: `รายการ Task: ${projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
+      }`,
+    'owner-view': `มุมมองทีม: ${projects.find(p => p.ProjectID === selectedProjectId)?.Name || ""}`,
+
     projects: "โปรเจกต์ทั้งหมด",
     config: "ตั้งค่า",
   };
@@ -208,6 +215,10 @@ const App = () => {
         );
       default:
         return null;
+
+      case "owner-view":
+        return <OwnerViewTab />;
+        
     }
   };
 
