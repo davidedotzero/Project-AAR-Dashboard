@@ -107,6 +107,21 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     }));
   };
 
+  const formatDateToDDMMYYYY = (dateString: string | null | undefined): string => {
+      if (!dateString) {
+        return "N/A";
+      }
+      // เพิ่มการตรวจสอบความถูกต้องของ Date String
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+          return "N/A";
+      }
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    };
+
   // --- ส่วนที่ 2: Return JSX (นำโค้ดทั้งหมดมารวมในนี้) ---
   return (
     <div>
@@ -230,7 +245,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                           </td>
                           <td className="px-6 py-4 border-b">
                             <DeadlineAlert
-                              deadline={task.Deadline}
+                              deadline={formatDateToDDMMYYYY(task.Deadline)}
                               status={task.Status}
                             />
                           </td>

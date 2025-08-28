@@ -58,6 +58,21 @@ export const DashboardTab: React.FC = () => {
     return project ? project.Name : projectId;
   };
 
+  const formatDateToDDMMYYYY = (dateString: string | null | undefined): string => {
+    if (!dateString) {
+      return "N/A";
+    }
+    // เพิ่มการตรวจสอบความถูกต้องของ Date String
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        return "N/A";
+    }
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
   // จัดเรียงตาม Deadline (Requirement: Arrange ตาม Deadline)
   const sortedTasks = useMemo(() => {
     const sortableTasks = [...filteredTasks];
@@ -176,7 +191,7 @@ export const DashboardTab: React.FC = () => {
             {sortedTasks.map((task) => (
               <tr key={task._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {task.Deadline || "N/A"}
+                  {formatDateToDDMMYYYY(task.Deadline)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {task.Owner || "Unassigned"}
