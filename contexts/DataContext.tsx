@@ -21,6 +21,8 @@ interface DataContextType {
   tasks: Task[];
   initialTasks: Task[];
   selectedProjectId: string | null;
+  allTsks: Task[];
+  isLoadingAllTasks: boolean;
 
   // Status State
   loadingMessage: string | null;
@@ -537,6 +539,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     createTask,
     confirmDelete,
     allTasks,
+    isLoadingAllTasks: loadingMessage === "กำลังโหลด Task...",
+    
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

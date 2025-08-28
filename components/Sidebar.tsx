@@ -76,19 +76,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <nav className="space-y-3">
           <TabButton
+            id="dashboard"
+            label="กรองงานทั้งหมด"
+            icon={<ChartBarIcon />}
+            activeTab={activeTab}
+            onClick={setActiveTab}
+          />
+          {/* <TabButton
             id="aar"
             label="สรุปผล (AAR)"
             icon={<ChartBarIcon />}
             activeTab={activeTab}
             onClick={setActiveTab}
-          />
-          <TabButton
+          /> */}
+          {/* <TabButton
             id="tasks"
             label="รายการ Task"
             icon={<ListTodoIcon />}
             activeTab={activeTab}
             onClick={setActiveTab}
-          />
+          /> */}
           <TabButton
             id="projects"
             label="โปรเจกต์"
@@ -96,17 +103,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             activeTab={activeTab}
             onClick={setActiveTab}
           />
-          <TabButton
+          {/* <TabButton
             id="config"
             label="ตั้งค่า"
             icon={<SettingsIcon />}
             activeTab={activeTab}
             onClick={setActiveTab}
-          />
+          /> */}
         </nav>
 
-        <div className="mt-auto pt-6 border-t border-gray-200">
-          <TabButton
+        {/* <div className="mt-auto pt-6 border-t border-gray-200"> */}
+          {/* <TabButton
             id="owner-view"
             label="มุมมองทีม"
             icon={<UsersIcon />}
@@ -119,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             icon={<ListTodoIcon />}
             activeTab={activeTab}
             onClick={setActiveTab}
-          />
+          /> */}
 
           {/* <div className="mt-auto pt-6 border-t border-gray-200">
 
@@ -152,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="ml-2">สร้างโปรเจกต์ใหม่</span>
         </button>
       </div> */}
-        </div>
+      {/* </div> */}
       </aside>
     </>
   );

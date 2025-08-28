@@ -4,7 +4,6 @@ import { ownerOptions, phaseOptions, statusOptions } from "./constants";
 // Import Context Hooks (ปรับ Path ตามโครงสร้างโปรเจกต์ของคุณ)
 import { useUI } from "./contexts/UIContext";
 import { useData } from "./contexts/DataContext";
-
 import { Sidebar } from "./components/Sidebar";
 import { AarTab } from "./components/AarTab";
 import { TasksTab } from "./components/TasksTab";
@@ -15,13 +14,11 @@ import { CreateProjectModal } from "./components/CreateProjectModal";
 import { ConfirmDeleteModal } from "./components/ConfirmDeleteModal";
 import { CreateTaskModal } from "./components/CreateTaskModal";
 import { MenuIcon } from "./components/icons";
-
 import { EditProjectModal } from "./components/EditProjectModal";
-
 import type { Project } from "./types";
-
 import { OwnerViewTab } from './components/OwnerViewTab';
 import { AllTasksTeamViewTab } from './components/AllTasksTeamViewTab';
+import { DashboardTab } from "./components/DashboardTab";
 
 
 
@@ -132,6 +129,7 @@ const App = () => {
       }`,
     'owner-view': `มุมมองทีม: ${projects.find(p => p.ProjectID === selectedProjectId)?.Name || ""}`,
     'all-tasks-team-view': "มุมมองทีม (ทุกโปรเจกต์)",
+    dashboard: "Dashboard & Global Filters",
     projects: "โปรเจกต์ทั้งหมด",
     config: "ตั้งค่า",
   };
@@ -151,10 +149,14 @@ const App = () => {
 
     if (error) return <ErrorDisplay message={error} />;
 
-    if (projects.length === 0 && !loadingMessage) {
-      return (
-        <div className="text-center text-gray-500 mt-10">ไม่พบโปรเจกต์</div>
-      );
+    // if (projects.length === 0 && !loadingMessage) {
+    //   return (
+    //     <div className="text-center text-gray-500 mt-10">ไม่พบโปรเจกต์</div>
+    //   );
+    if (projects.length > 0 && !selectedProjectId && !["projects", "config", 'dashboard'].includes(activeTab)) {
+      // ถ้ามีโปรเจกต์แต่ยังไม่ได้เลือก ให้เลือกโปรเจกต์แรกโดยอัตโนมัติ
+      setSelectedProjectId(projects[0].ProjectID);
+      return <LoadingIndicator message="กำลังโหลดข้อมูลโปรเจกต์..." />; 
     }
 
     // สถานะที่รอการเลือกโปรเจกต์ (เช่น ตอนโหลดครั้งแรก)
@@ -222,8 +224,12 @@ const App = () => {
 
       case "owner-view":
         return <OwnerViewTab />;
+        
       case "all-tasks-view":
             return <AllTasksTeamViewTab />;
+
+      case "dashboard":
+        return <DashboardTab />;
     }
   };
 

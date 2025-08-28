@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { UIProvider } from "./contexts/UIContext";
 import { DataProvider } from "./contexts/DataContext";
+import { GlobalFilterProvider } from "./components/GlobalFilterContext";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -14,7 +15,9 @@ root.render(
   <React.StrictMode>
     <UIProvider>
       <DataProvider>
+        <GlobalFilterProvider>
         <App />
+        </GlobalFilterProvider>
       </DataProvider>
     </UIProvider>
   </React.StrictMode>
