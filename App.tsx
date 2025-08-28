@@ -21,6 +21,8 @@ import { EditProjectModal } from "./components/EditProjectModal";
 import type { Project } from "./types";
 
 import { OwnerViewTab } from './components/OwnerViewTab';
+import { AllTasksTeamViewTab } from './components/AllTasksTeamViewTab';
+
 
 
 // Helper Components (ย้ายมาจากโค้ดเดิม)
@@ -129,7 +131,7 @@ const App = () => {
     tasks: `รายการ Task: ${projects.find((p) => p.ProjectID === selectedProjectId)?.Name || ""
       }`,
     'owner-view': `มุมมองทีม: ${projects.find(p => p.ProjectID === selectedProjectId)?.Name || ""}`,
-
+    'all-tasks-team-view': "มุมมองทีม (ทุกโปรเจกต์)",
     projects: "โปรเจกต์ทั้งหมด",
     config: "ตั้งค่า",
   };
@@ -160,7 +162,8 @@ const App = () => {
       projects.length > 0 &&
       !selectedProjectId &&
       activeTab !== "projects" &&
-      activeTab !== "config"
+      activeTab !== "config" &&
+      activeTab !== "all-tasks-team-view"
     ) {
       return (
         <div className="text-center text-gray-500 mt-10">
@@ -219,7 +222,8 @@ const App = () => {
 
       case "owner-view":
         return <OwnerViewTab />;
-        
+      case "all-tasks-view":
+            return <AllTasksTeamViewTab />;
     }
   };
 
@@ -266,7 +270,7 @@ const App = () => {
               disabled={!projects.length}
               className="w-48 md:w-64 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
             >
-              {projects.length === 0 && <option value="">ไม่พบโปรเจกต์</option>}
+              {projects.length === 0 && <option value="ALL">ไม่พบโปรเจกต์</option>}
               {projects.map((p) => (
                 <option key={p.ProjectID} value={p.ProjectID}>
                   {p.Name}
@@ -342,6 +346,7 @@ const App = () => {
         }
         isLoading={!!loadingMessage}
       />
+      
     </div>
   );
 };

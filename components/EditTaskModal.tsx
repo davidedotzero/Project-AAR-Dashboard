@@ -8,6 +8,7 @@ import {
   impactScoreOptions,
   phaseColorMap,
 } from "../constants";
+import { FileUpload } from "./FileUpload";
 import { ArrowLeftIcon, ArrowRightIcon } from "./icons";
 
 const DetailItem: React.FC<{ label: string; children: React.ReactNode }> = ({
@@ -373,6 +374,9 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                     />
                   </FormField>
                 </div>
+
+                {task.rowIndex && <FileUpload taskRowIndex={task.rowIndex} />}
+
               </div>
 
               <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">

@@ -61,6 +61,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   // Data States
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [initialTasks, setInitialTasks] = useState<Task[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null
@@ -232,6 +233,59 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       setTasks([]);
     }
   }, [selectedProjectId, fetchTasks]);
+
+  useEffect(() => {
+    if (!selectedProjectId || allTasks.length === 0) {
+      setTasks([]);
+      return;
+    }
+    if (selectedProjectId === "ALL") {
+      setTasks(allTasks);
+      setLoadingMessage("");
+    } else {
+      setLoadingMessage("กำลังโหลด Task...");
+
+      const SCRIPT_URL = import.meta.env.VITE_APP_SCRIPT_URL;
+      fetch(`${SCRIPT_URL}?op=getTasks&projectId=${selectedProjectId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setTasks(data);
+          }
+        })
+        .catch(err => {
+          console.error("Failed to fetch tasks for selected project:", err);
+          setError("ไม่สามารถโหลดข้อมูล Task ได้");
+        })
+        .finally(() => {
+          setLoadingMessage("");
+        });
+    }
+  }, [selectedProjectId, allTasks]);
+
+
+  useEffect(() => {
+     const fetchAllTasks = () => {
+        fetch(`${SCRIPT_URL}?op=getAllTasks`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("All tasks fetched successfully:", data); // ตรวจสอบข้อมูลใน Console
+                if (Array.isArray(data)) {
+                  setAllTasks(data);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching all tasks:', error);
+                setError("ไม่สามารถโหลดข้อมูล Task ทั้งหมดได้");
+            });
+    };
+    fetchAllTasks();
+}, []);
 
   // --- Data Mutations & Actions ---
 
@@ -482,6 +536,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     updateProject,
     createTask,
     confirmDelete,
+    allTasks,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
