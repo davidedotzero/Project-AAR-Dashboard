@@ -36,7 +36,7 @@ interface DataContextType {
 
   // Actions
   setSelectedProjectId: (id: string | null) => void;
-  handleProjectSelect: (projectId: string) => void; // Combined action
+  handleProjectSelect: (projectId: string) => void;
   saveTask: (updatedTask: Task) => Promise<void>;
   createProject: (
     projectName: string,

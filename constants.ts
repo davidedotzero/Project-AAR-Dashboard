@@ -1,5 +1,3 @@
-import type { Task, Project } from "./types";
-
 export const ownerOptions: string[] = [
   "PRODUCT",
   "PRODUCTION",
@@ -8,6 +6,7 @@ export const ownerOptions: string[] = [
   "DEALERS",
   "WEB",
   "MANAGEMENT",
+  "STORES(หน้าร้าน)",
 ];
 export const statusOptions: string[] = [
   "Not Started",

@@ -5,6 +5,7 @@ import {
   FolderKanbanIcon,
   SettingsIcon,
   AddProjectIcon,
+  UsersIcon,
 } from "./icons";
 
 interface TabButtonProps {
@@ -103,7 +104,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       </nav>
 
+
       <div className="mt-auto pt-6 border-t border-gray-200">
+
+      <TabButton id="owner-view" label="มุมมองทีม" icon={<UsersIcon />} activeTab={activeTab} onClick={setActiveTab} />
+
+      {/* <div className="mt-auto pt-6 border-t border-gray-200">
+
         <label
           htmlFor="feedback-filter"
           className="block text-sm font-medium text-gray-700 mb-2"
@@ -133,6 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="ml-2">สร้างโปรเจกต์ใหม่</span>
         </button>
       </div> */}
+      </div>
     </aside>
     </>
   );
