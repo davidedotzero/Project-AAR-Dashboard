@@ -45,7 +45,10 @@ interface DataContextType {
     priority: number,
     selectedTasks: string[]
   ) => Promise<void>;
-  updateProject: (projectId: string, updatedData: { Name: string, Priority: number }) => Promise<void>;
+  updateProject: (
+    projectId: string,
+    updatedData: { Name: string; Priority: number }
+  ) => Promise<void>;
   createTask: (
     newTaskData: Omit<Task, "rowIndex" | "_id" | "Check">
   ) => Promise<void>;
@@ -249,13 +252,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
       const SCRIPT_URL = import.meta.env.VITE_APP_SCRIPT_URL;
       fetch(`${SCRIPT_URL}?op=getTasks&projectId=${selectedProjectId}`)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (Array.isArray(data)) {
             setTasks(data);
           }
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Failed to fetch tasks for selected project:", err);
           setError("ไม่สามารถโหลดข้อมูล Task ได้");
         })
@@ -265,29 +268,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [selectedProjectId, allTasks]);
 
-
   useEffect(() => {
-     const fetchAllTasks = () => {
-        fetch(`${SCRIPT_URL}?op=getAllTasks`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Network response was not ok");
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log("All tasks fetched successfully:", data); // ตรวจสอบข้อมูลใน Console
-                if (Array.isArray(data)) {
-                  setAllTasks(data);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching all tasks:', error);
-                setError("ไม่สามารถโหลดข้อมูล Task ทั้งหมดได้");
-            });
+    const fetchAllTasks = () => {
+      fetch(`${SCRIPT_URL}?op=getAllTasks`)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log("All tasks fetched successfully:", data); // ตรวจสอบข้อมูลใน Console
+          if (Array.isArray(data)) {
+            setAllTasks(data);
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching all tasks:", error);
+          setError("ไม่สามารถโหลดข้อมูล Task ทั้งหมดได้");
+        });
     };
     fetchAllTasks();
-}, []);
+  }, []);
 
   // --- Data Mutations & Actions ---
 
@@ -345,7 +347,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         });
         await fetchProjects();
         setSelectedProjectId(newProjectId);
-        setActiveTab("tasks"); // เปลี่ยน Tab (จาก UIContext)
+        setActiveTab("dashboard"); // เปลี่ยน Tab (จาก UIContext)
         closeModals(); // ปิด Modal (จาก UIContext)
       } catch (err: any) {
         setError(err.message);
@@ -356,31 +358,37 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     [fetchProjects, setActiveTab, closeModals]
   );
 
-  const updateProject = useCallback(async (projectId: string, updatedData: { Name: string, Priority: number }) => {
-    setLoadingMessage("กำลังอัปเดตโปรเจกต์...");
-    try {
+  const updateProject = useCallback(
+    async (
+      projectId: string,
+      updatedData: { Name: string; Priority: number }
+    ) => {
+      setLoadingMessage("กำลังอัปเดตโปรเจกต์...");
+      try {
         await fetch(SCRIPT_URL, {
-            method: "POST",
-            body: JSON.stringify({
-              op: "updateProject",
-              projectId: projectId,
-              updatedData: {
-                projectName: updatedData.Name,
-                priority: updatedData.Priority
-              }
-            }),
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-          });
+          method: "POST",
+          body: JSON.stringify({
+            op: "updateProject",
+            projectId: projectId,
+            updatedData: {
+              projectName: updatedData.Name,
+              priority: updatedData.Priority,
+            },
+          }),
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+        });
 
-          // Refetch เพื่อให้ข้อมูลและการเรียงลำดับถูกต้อง
-          await fetchProjects();
-          closeModals();
-    } catch (err: any) {
+        // Refetch เพื่อให้ข้อมูลและการเรียงลำดับถูกต้อง
+        await fetchProjects();
+        closeModals();
+      } catch (err: any) {
         setError(err.message);
-    } finally {
+      } finally {
         setLoadingMessage(null);
-    }
-  }, [fetchProjects, closeModals]);
+      }
+    },
+    [fetchProjects, closeModals]
+  );
 
   const createTask = useCallback(
     async (newTaskData: Omit<Task, "rowIndex" | "_id" | "Check">) => {
@@ -459,8 +467,27 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     onTimePerformance,
     tasksByStatus,
     tasksByOwner,
+    incompleteCount,
+    overdueCount,
+    warningCount,
+    doneCount,
   } = useMemo(() => {
-    const completedTasks = tasks.filter((t) => t.Status === "Done");
+    const today = new Date();
+    const warningData = new Date();
+    warningData.setDate(today.getDate() + 10); // กำหนดช่วงเวลาเตือน 10 วัน
+    const incompleteTasks = allTasks.filter(
+      (t) => t.Status !== "Done" && t.Status !== "Cancelled"
+    );
+    const overdueTasks = incompleteTasks.filter(
+      (t) => t.Deadline && new Date(t.Deadline) < today
+    );
+    const warningTasks = incompleteTasks.filter((t) => {
+      if (!tasks.Deadline) return false;
+      const deadlineDate = new Date(tasks.Deadline);
+      return deadlineDate >= today && deadlineDate <= warningData;
+    });
+
+    const completedTasks = allTasks.filter((t) => t.Status === "Done");
 
     // คำนวณสถิติพื้นฐาน
     const statusCounts: TasksByStatus = statusOptions.map((status) => ({
@@ -513,8 +540,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       onTimePerformance: onTimePerf.toFixed(1),
       tasksByStatus: statusCounts,
       tasksByOwner: ownerCounts,
+      incompleteCount: incompleteTasks.length,
+      overdueCount: overdueTasks.length,
+      warningCount: warningTasks.length,
+      doneCount: completedTasks.length,
     };
-  }, [tasks]);
+  }, [tasks, allTasks]);
 
   const value = {
     projects,
@@ -540,7 +571,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     confirmDelete,
     allTasks,
     isLoadingAllTasks: loadingMessage === "กำลังโหลด Task...",
-    
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -12,7 +12,7 @@ export const statusOptions: string[] = [
   "Not Started",
   "In Progress",
   "Done",
-  "Blocked",
+  "Cancelled",
 ];
 export const phaseOptions: string[] = [
   "Research & Planning",

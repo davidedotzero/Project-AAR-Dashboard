@@ -57,7 +57,7 @@ const UIContext = createContext<UIContextType | undefined>(undefined);
 export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [activeTab, setActiveTab] = useState("projects");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [filterTeam, setFilterTeam] = useState("ALL");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 

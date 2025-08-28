@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import type { Task, Project } from '../types';
+import { ownerOptions as allOwnerOptions , statusOptions as allstatusOptions } from '@/constants';
 
 // --- Types ---
 interface FilterSelections {
@@ -96,10 +97,10 @@ export const GlobalFilterProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     // แปลง Set เป็น Array และเรียงลำดับ
     const calculatedOptions: AvailableOptions = {
-        owners: Array.from(owners).sort(),
+        owners: allOwnerOptions.sort(),
         // ใช้รายชื่อโปรเจกต์หลัก (ที่เรียงตาม Priority แล้ว) และกรองเฉพาะที่มีข้อมูล
         projects: projects.filter(p => projectIds.has(p.ProjectID)),
-        statuses: Array.from(statuses).sort(),
+        statuses: allstatusOptions.sort(),
     };
 
     return { options: calculatedOptions, filteredTasks: finalFilteredTasks };

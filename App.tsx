@@ -166,6 +166,7 @@ const App = () => {
       activeTab !== "projects" &&
       activeTab !== "config" &&
       activeTab !== "all-tasks-team-view"
+      && activeTab !== "dashboard"
     ) {
       return (
         <div className="text-center text-gray-500 mt-10">
@@ -224,7 +225,7 @@ const App = () => {
 
       case "owner-view":
         return <OwnerViewTab />;
-        
+
       case "all-tasks-view":
             return <AllTasksTeamViewTab />;
 
@@ -261,7 +262,7 @@ const App = () => {
           </div>
 
           {/* Project Selector */}
-          <div className="flex items-center space-x-2 flex-shrink-0">
+          {/* <div className="flex items-center space-x-2 flex-shrink-0">
             <label
               htmlFor="project-selector"
               className="hidden md:block text-sm font-medium text-gray-700"
@@ -283,7 +284,7 @@ const App = () => {
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
         </header>
 
         <div className="flex-grow relative">
