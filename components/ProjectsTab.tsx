@@ -17,7 +17,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   const { openCreateProjectModal, openEditProjectModal } = useUI();
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Filter projects based on search query
+  // Filter projects based on search query first
   const filteredProjects = useMemo(() => {
     if (!searchQuery) {
       return projects;
@@ -27,11 +27,16 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
     );
   }, [projects, searchQuery]);
 
+  // Then, sort the filtered projects by priority
+  const sortedProjects = useMemo(() => {
+    return [...filteredProjects].sort((a, b) => a.Priority - b.Priority);
+  }, [filteredProjects]);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap gap-4 justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">
-          โปรเจกต์ทั้งหมด ({filteredProjects.length})
+          โปรเจกต์ทั้งหมด ({sortedProjects.length})
         </h1>
         <button
             onClick={openCreateProjectModal}
@@ -59,7 +64,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProjects.map((p) => (
+        {sortedProjects.map((p) => (
           <div
             key={p.ProjectID}
             className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500 hover:shadow-lg transition-shadow duration-300 cursor-pointer"
@@ -101,7 +106,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
           </div>
         ))}
       </div>
-      {filteredProjects.length === 0 && (
+      {sortedProjects.length === 0 && (
           <div className="text-center py-10 text-gray-500 bg-white rounded-lg shadow-sm border">
               ไม่พบโปรเจกต์ที่ตรงกับคำค้นหา
           </div>
