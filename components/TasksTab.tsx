@@ -1,362 +1,156 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import type { Task } from "../types";
 import {
   statusColorMap,
   phaseColorMap,
-  phaseOptions,
-  ownerOptions,
 } from "../constants";
-import { EditIcon, ChevronDownIcon, ViewIcon, DeleteIcon } from "./icons"; // <-- เพิ่ม ViewIcon ด้วย
+import { EditIcon, ViewIcon, DeleteIcon } from "./icons";
 import { TaskFilters } from "./TaskFilters";
 import { DeadlineAlert } from "./DeadlineAlert";
 
 interface TasksTabProps {
-  filteredTasks: Task[];
   tasks: Task[];
   onEditTask: (task: Task) => void;
   onTaskView: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
-  onOpenCreateTask: (phase: string) => void;
 }
 
 export const TasksTab: React.FC<TasksTabProps> = ({
   tasks,
-  // filteredTasks,
   onEditTask,
   onTaskView,
   onDeleteTask,
-  onOpenCreateTask,
 }) => {
-  const tasksCountByOwner = useMemo(() => {
-    if (!tasks) return {};
-    const counts: { [key: string]: number } = {};
-    ownerOptions.forEach((owner) => {
-      const activeTasks = tasks.filter(
-        (task) => task.Owner === owner && task.Status !== "Done"
-      ).length;
-      if (activeTasks > 0) {
-        counts[owner] = activeTasks;
-      }
-    });
-    return counts;
-  }, [tasks]);
-
-  // --- ส่วนที่ 1: Hooks และ Logic (ถูกต้องแล้ว) ---
   const [filters, setFilters] = useState<{ [key: string]: string }>({});
-  const [expandedPhases, setExpandedPhases] = useState<{
-    [key: string]: boolean;
-  }>({});
 
   const handleFilterChange = (field: string, value: string) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
+  // 1. Logic การกรองข้อมูล (เหมือนเดิม)
   const filteredTasks = useMemo(() => {
     if (!tasks) return [];
-
     return tasks.filter((task: Task) => {
-      const activeFilterKeys = Object.keys(filters).filter(
-        (key) => filters[key]
-      );
-
-      if (activeFilterKeys.length === 0) {
-        return true;
-      }
+      const activeFilterKeys = Object.keys(filters).filter((key) => filters[key]);
+      if (activeFilterKeys.length === 0) return true;
       return activeFilterKeys.every((field) => {
         const filterValue = filters[field].toLowerCase();
         const taskValue = task[field as keyof Task];
-
-        if (taskValue === null || taskValue === undefined) {
-          return false;
-        }
-
+        if (taskValue === null || taskValue === undefined) return false;
         const taskValueString = String(taskValue).toLowerCase();
         if (field === "Owner" || field === "Status" || field === "Phase") {
           return taskValueString === filterValue;
-        } else {
-          return taskValueString.includes(filterValue);
         }
+        return taskValueString.includes(filterValue);
       });
     });
   }, [tasks, filters]);
 
-  const tasksByPhase = useMemo(() => {
-    const grouped: { [key: string]: Task[] } = {};
-    phaseOptions.forEach((phase) => {
-      const tasksInPhase = filteredTasks.filter((task) => task.Phase === phase);
-      if (tasksInPhase.length > 0) {
-        grouped[phase] = tasksInPhase;
-      }
+  // 2. ++ เพิ่ม Logic การจัดเรียงตาม Deadline ++
+  const sortedTasks = useMemo(() => {
+    const sortableTasks = [...filteredTasks];
+    sortableTasks.sort((a, b) => {
+      const aDeadline = a.Deadline ? new Date(a.Deadline).getTime() : Infinity;
+      const bDeadline = b.Deadline ? new Date(b.Deadline).getTime() : Infinity;
+      return aDeadline - bDeadline; // เรียงจากน้อยไปมาก (ใกล้ที่สุดไปไกลที่สุด)
     });
-    return grouped;
+    return sortableTasks;
   }, [filteredTasks]);
 
-  useEffect(() => {
-    if (Object.keys(tasksByPhase).length > 0) {
-      const firstPhase = Object.keys(tasksByPhase)[0];
-      setExpandedPhases({ [firstPhase]: true });
-    } else {
-      setExpandedPhases({}); // Clear state when tasks are empty
-    }
-  }, [tasksByPhase]);
-
-  const togglePhase = (phase: string) => {
-    setExpandedPhases((prev) => ({
-      ...prev,
-      [phase]: !prev[phase],
-    }));
-  };
-
-  const formatDateToDDMMYYYY = (dateString: string | null | undefined): string => {
-      if (!dateString) {
-        return "N/A";
-      }
-      // เพิ่มการตรวจสอบความถูกต้องของ Date String
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-          return "N/A";
-      }
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}-${month}-${year}`;
-    };
-
-  // --- ส่วนที่ 2: Return JSX (นำโค้ดทั้งหมดมารวมในนี้) ---
   return (
     <div>
       <TaskFilters filters={filters} onFilterChange={handleFilterChange} />
 
-      <div className="mb-6 p-4 bg-white border rounded-xl shadow-sm">
-        <h3 className="text-md font-bold text-gray-700 mb-3">
-          สรุป Task ที่ต้องดำเนินการ (Active)
-        </h3>
-        <div className="flex flex-wrap gap-3">
-          {Object.keys(tasksCountByOwner).length > 0 ? (
-            Object.entries(tasksCountByOwner).map(([owner, count]) => (
-              <div
-                key={owner}
-                className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 rounded-full"
-              >
-                <span className="font-semibold text-gray-800 text-sm">
-                  {owner}:
-                </span>
-                <span className="font-bold text-orange-600 text-lg">
-                  {count}
-                </span>
-                <span className="text-gray-500 text-sm">Tasks</span>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-gray-500">
-              ไม่มี Task ที่ต้องดำเนินการในขณะนี้
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* เปลี่ยนแค่ส่วน Table นี้ */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <table className="w-full text-sm">
-          {/* Header ของตาราง (จะถูกซ่อนบนมือถือ) */}
+          {/* 3. ++ ปรับปรุง Header ของตาราง ++ */}
           <thead className="hidden md:table-header-group text-xs text-gray-700 uppercase bg-gray-50">
             <tr>
-              <th scope="col" className="px-6 py-4 font-medium">
-                Task
-              </th>
-              <th scope="col" className="px-6 py-4 font-medium">
-                Owner
-              </th>
-              <th scope="col" className="px-6 py-4 font-medium">
-                Deadline
-              </th>
-              <th scope="col" className="px-6 py-4 font-medium">
-                Status
-              </th>
-              <th scope="col" className="px-4 py-4 font-medium text-center">
-                Actions
-              </th>
+              <th scope="col" className="px-6 py-4 font-medium">Task</th>
+              <th scope="col" className="px-6 py-4 font-medium">Phase</th>
+              <th scope="col" className="px-6 py-4 font-medium">Owner</th>
+              <th scope="col" className="px-6 py-4 font-medium">Deadline</th>
+              <th scope="col" className="px-6 py-4 font-medium">Status</th>
+              <th scope="col" className="px-4 py-4 font-medium text-center">Actions</th>
             </tr>
           </thead>
 
-          {/* Body ของตาราง */}
-          <tbody className="divide-y md:divide-y-0 divide-gray-200">
-            {Object.entries(tasksByPhase).map(([phase, tasksInPhase]) => {
-              if (!Array.isArray(tasksInPhase)) {
-                return null;
-              }
-              const isExpanded = !!expandedPhases[phase];
-              return (
-                <React.Fragment key={phase}>
-                  {/* แถว Header ของแต่ละ Phase (แสดงทุกขนาดหน้าจอ) */}
-                  <tr
-                    className="bg-gray-50 hover:bg-gray-100 border-b border-t border-gray-200 cursor-pointer"
-                    onClick={() => togglePhase(phase)}
-                  >
-                    <td colSpan={5} className="px-4 py-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={`px-2.5 py-1 text-xs font-semibold rounded-full ${phaseColorMap[phase]?.bg} ${phaseColorMap[phase]?.text}`}
-                          >
-                            {phase}
-                          </span>
-                          <span className="ml-4 text-gray-500 font-medium">
-                            ({tasksInPhase.length} Tasks)
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenCreateTask({phase:phase});
-                            }}
-                            className="ml-4 text-sm font-bold text-orange-500 hover:text-orange-700 transition-colors"
-                            aria-label={`Add new task to ${phase}`}
-                          >
-                            + Add Task
-                          </button>
-                        </div>
-                        <button
-                          className={`p-1 rounded-full transform transition-transform duration-200 ${
-                            isExpanded ? "rotate-180" : "rotate-0"
-                          }`}
-                        >
-                          <ChevronDownIcon />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* แสดง Task แต่ละรายการ (เมื่อกลุ่มถูกขยาย) */}
-                  {isExpanded &&
-                    tasksInPhase.map((task) => (
-                      <React.Fragment key={task._id}>
-                        {/* ----- 1. มุมมอง Desktop (Table Row) ----- */}
-                        <tr
-                          key={task._id}
-                          className="hidden md:table-row bg-white hover:bg-orange-50"
-                        >
-                          <td className="px-6 py-4 font-medium text-gray-900 border-b">
-                            {task.Task}
-                          </td>
-                          <td className="px-6 py-4 border-b">
-                            <span className="px-2.5 py-1 text-xs font-semibold text-orange-800 bg-orange-100 rounded-full">
-                              {task.Owner}
+          {/* 4. ++ ปรับปรุง Body ของตาราง (แสดงผลแบบไม่แบ่งกลุ่ม) ++ */}
+          <tbody className="divide-y md:divide-none divide-gray-200">
+            {sortedTasks.map((task) => (
+              <React.Fragment key={task._id}>
+                {/* ----- 1. มุมมอง Desktop (Table Row) ----- */}
+                <tr className="hidden md:table-row bg-white hover:bg-orange-50">
+                  <td className="px-6 py-4 font-medium text-gray-900">{task.Task}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${phaseColorMap[task.Phase]?.bg} ${phaseColorMap[task.Phase]?.text}`}>
+                      {task.Phase}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="px-2.5 py-1 text-xs font-semibold text-orange-800 bg-orange-100 rounded-full">
+                      {task.Owner}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <DeadlineAlert deadline={task.Deadline} status={task.Status} />
+                  </td>
+                  <td className={`px-6 py-4 font-semibold ${statusColorMap[task.Status] || "text-gray-500"}`}>
+                    {task.Status}
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    <div className="flex items-center justify-center space-x-1">
+                      <button onClick={() => onTaskView(task)} className="text-gray-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-100" aria-label="View Task"><ViewIcon /></button>
+                      <button onClick={() => onEditTask(task)} className="text-gray-500 hover:text-orange-600 p-2 rounded-full hover:bg-orange-100" aria-label="Edit Task"><EditIcon /></button>
+                      <button onClick={() => onDeleteTask(task)} className="text-gray-500 hover:text-red-600 p-2 rounded-full hover:bg-red-100" aria-label="Delete Task"><DeleteIcon /></button>
+                    </div>
+                  </td>
+                </tr>
+                {/* ----- 2. มุมมอง Mobile (Card) ----- */}
+                <tr className="md:hidden">
+                  <td colSpan={5} className="p-4">
+                    <div className="space-y-3 p-4 bg-white border rounded-lg shadow-sm">
+                        <div className="flex justify-between items-start">
+                             <p className="font-bold text-gray-800 flex-1 pr-2">{task.Task}</p>
+                             <span className={`flex-shrink-0 px-2.5 py-1 text-xs font-semibold rounded-full ${phaseColorMap[task.Phase]?.bg} ${phaseColorMap[task.Phase]?.text}`}>
+                                {task.Phase}
                             </span>
-                          </td>
-                          <td className="px-6 py-4 border-b">
-                            <DeadlineAlert
-                              deadline={formatDateToDDMMYYYY(task.Deadline)}
-                              status={task.Status}
-                            />
-                          </td>
-
-                          <td
-                            className={`px-6 py-4 font-semibold border-b ${
-                              statusColorMap[task.Status] || "text-gray-500"
-                            }`}
-                          >
-                            {task.Status}
-                          </td>
-
-                          <td className="px-4 py-4 text-center border-b border-gray-200">
-                            <div className="flex items-center justify-center space-x-1">
-                              <button
-                                onClick={() => onTaskView(task)}
-                                className="text-gray-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-100"
-                                aria-label="View Task"
-                              >
-                                <ViewIcon />
-                              </button>
-                              <button
-                                onClick={() => onEditTask(task)}
-                                className="text-gray-500 hover:text-orange-600 p-2 rounded-full hover:bg-orange-100"
-                                aria-label="Edit Task"
-                              >
-                                <EditIcon />
-                              </button>
-                              <button
-                                onClick={() => onDeleteTask(task._id)}
-                                className="text-gray-500 hover:text-red-600 p-2 rounded-full hover:bg-red-100"
-                                aria-label="Delete Task"
-                              >
-                                <DeleteIcon />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                        {/* ----- 2. มุมมอง Mobile (Card) ----- */}
-                        <tr className="md:hidden">
-                          <td colSpan={5} className="p-4">
-                            <div className="space-y-3">
-                              <p className="font-bold text-gray-800">
-                                {task.Task}
-                              </p>
-                              <div className="grid grid-cols-2 gap-3 text-xs">
-                                <div>
-                                  <p className="text-gray-500 mb-1">OWNER</p>
-                                  <span className="px-2.5 py-1 text-xs ...">
-                                    {task.Owner}
-                                  </span>
-                                </div>
-                                <div>
-                                  <p className="text-gray-500 mb-1">STATUS</p>
-                                  <p
-                                    className={`font-semibold ${
-                                      statusColorMap[task.Status] ||
-                                      "text-gray-500"
-                                    }`}
-                                  >
-                                    {task.Status}
-                                  </p>
-                                </div>
-                              </div>
-                              <div>
-                                <p className="text-gray-500 mb-1 text-xs">
-                                  DEADLINE
-                                </p>
-                                <DeadlineAlert
-                                  deadline={task.Deadline}
-                                  status={task.Status}
-                                />
-                              </div>
-                              <div className="flex justify-end pt-2 border-t mt-3">
-                                <div className="flex items-center justify-center space-x-1">
-                                  <button
-                                    onClick={() => onTaskView(task)}
-                                    className="..."
-                                  >
-                                    <ViewIcon />
-                                  </button>
-                                  <button
-                                    onClick={() => onEditTask(task)}
-                                    className="..."
-                                  >
-                                    <EditIcon />
-                                  </button>
-                                  <button
-                                    onClick={() => onDeleteTask(task)}
-                                    className="..."
-                                  >
-                                    <DeleteIcon />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      </React.Fragment>
-                    ))}
-                </React.Fragment>
-              );
-            })}
+                        </div>
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <p className="text-gray-500 mb-1">OWNER</p>
+                          <span className="px-2.5 py-1 font-semibold text-orange-800 bg-orange-100 rounded-full">{task.Owner}</span>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 mb-1">STATUS</p>
+                          <p className={`font-semibold ${statusColorMap[task.Status] || "text-gray-500"}`}>{task.Status}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 mb-1 text-xs">DEADLINE</p>
+                        <DeadlineAlert deadline={task.Deadline} status={task.Status} />
+                      </div>
+                      <div className="flex justify-end pt-2 border-t mt-3">
+                        <div className="flex items-center justify-center space-x-1">
+                          <button onClick={() => onTaskView(task)} className="text-gray-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-100"><ViewIcon /></button>
+                          <button onClick={() => onEditTask(task)} className="text-gray-500 hover:text-orange-600 p-2 rounded-full hover:bg-orange-100"><EditIcon /></button>
+                          <button onClick={() => onDeleteTask(task)} className="text-gray-500 hover:text-red-600 p-2 rounded-full hover:bg-red-100"><DeleteIcon /></button>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </React.Fragment>
+            ))}
+             {sortedTasks.length === 0 && (
+                 <tr>
+                    <td colSpan={6} className="text-center py-10 text-gray-500">
+                        ไม่พบ Task ที่ตรงกับเกณฑ์การค้นหา
+                    </td>
+                </tr>
+            )}
           </tbody>
         </table>
-      </div>
-      <div className="mt-6 text-sm text-gray-600">
-        <p>
-          <strong>หมายเหตุ:</strong> ข้อมูล Task จะถูกดึงและบันทึกไปยัง Google
-          Sheet โดยตรง
-        </p>
       </div>
     </div>
   );

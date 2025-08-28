@@ -9,10 +9,9 @@ export const ownerOptions: string[] = [
   "STORES(หน้าร้าน)",
 ];
 export const statusOptions: string[] = [
-  "Not Started",
   "In Progress",
+  "Assitance Needed",
   "Done",
-  "Cancelled",
 ];
 export const phaseOptions: string[] = [
   "Research & Planning",

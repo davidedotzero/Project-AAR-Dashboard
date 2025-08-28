@@ -19,6 +19,7 @@ import type { Project } from "./types";
 import { OwnerViewTab } from './components/OwnerViewTab';
 import { AllTasksTeamViewTab } from './components/AllTasksTeamViewTab';
 import { DashboardTab } from "./components/DashboardTab";
+import { Header } from "./components/Header";
 
 
 
@@ -236,7 +237,7 @@ const App = () => {
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans">
-      <Sidebar
+      {/* <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         filterTeam={filterTeam}
@@ -245,11 +246,11 @@ const App = () => {
         onOpenCreateProject={openCreateProjectModal}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-      />
+      /> */}
 
       <main className="w-full p-4 md:p-8 overflow-y-auto flex flex-col">
         <header className="flex flex-wrap justify-between items-center mb-6 pb-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center">
+          {/* <div className="flex items-center">
             <button
               className="p-2 mr-2 text-gray-600 hover:text-orange-500 md:hidden"
               onClick={() => setIsSidebarOpen(true)}
@@ -259,7 +260,17 @@ const App = () => {
             <h2 className="text-xl md:text-3xl font-bold text-gray-800 truncate">
               {tabTitles[activeTab]}
             </h2>
-          </div>
+          </div> */}
+
+          
+          <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        projects={projects}
+        selectedProjectId={selectedProjectId}
+        setSelectedProjectId={setSelectedProjectId}
+      />
+          
 
           {/* Project Selector */}
           {/* <div className="flex items-center space-x-2 flex-shrink-0">
