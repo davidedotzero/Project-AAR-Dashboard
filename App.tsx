@@ -76,6 +76,7 @@ const App = () => {
     isCreateProjectModalOpen,
     isEditProjectModalOpen,
     isDeleteModalOpen,
+    newTaskDefaults,
     isCreateTaskModalOpen,
     currentTask,
     currentIndex,
@@ -309,7 +310,7 @@ const App = () => {
         isOpen={isCreateTaskModalOpen}
         onClose={closeModals}
         onCreate={createTask}
-        initialPhase={phaseForNewTask}
+        initialData={newTaskDefaults}
         isLoading={!!loadingMessage}
       />
       {(isEditModalOpen || isViewModalOpen) && currentTask && (

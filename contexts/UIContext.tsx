@@ -28,6 +28,7 @@ interface UIContextType {
   isEditProjectModalOpen: boolean;
   isDeleteModalOpen: boolean;
   isCreateTaskModalOpen: boolean;
+  newTaskDefaults: { Owner: string; Status: string } | null;
 
   //Modal Data
   currentTask: Task | null;
@@ -45,7 +46,7 @@ interface UIContextType {
   openCreateProjectModal: () => void;
   openEditProjectModal: (project: Project) => void;
   openDeleteModal: (type: "task" | "project", data: any) => void;
-  openCreateTaskModal: (phase: string) => void;
+  openCreateTaskModal: (defaults: { phase?: string; owner?: string }) => void;
 
   // allTasks Navigation
   navigateTask: (direction: "next" | "previous", allTasks: Task[]) => void;
@@ -68,6 +69,10 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+  const [newTaskDefaults, setNewTaskDefaults] = useState<{
+    phase?: string;
+    owner?: string;
+  } | null>(null);
 
   // Modal Data
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
@@ -123,8 +128,8 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsDeleteModalOpen(true);
   }, []);
 
-  const openCreateTaskModal = useCallback((phase: string) => {
-    setPhaseForNewTask(phase);
+  const openCreateTaskModal = useCallback((defaults: {phase?: string; owner?: string}) => {
+    setPhaseForNewTask(defaults);
     setIsCreateTaskModalOpen(true);
   }, []);
 
@@ -160,7 +165,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
     currentTask,
     currentIndex,
     itemToDelete,
-    phaseForNewTask,
+    // phaseForNewTask,
 
     openEditModal,
     openViewModal,
@@ -168,6 +173,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
     openCreateProjectModal,
     openEditProjectModal,
     openDeleteModal,
+    newTaskDefaults,
     openCreateTaskModal,
     navigateTask,
 

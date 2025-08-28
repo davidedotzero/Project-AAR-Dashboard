@@ -11,7 +11,7 @@ interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (newTaskData: NewTaskData) => void;
-  initialPhase: string | null;
+  initialData: { phase?: string; owner?: string } | null;
   isLoading: boolean;
 }
 
@@ -22,7 +22,7 @@ const FormField: React.FC<{ label: string; children: React.ReactNode }> = ({ lab
     </div>
 );
 
-export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onCreate, initialPhase, isLoading }) => {
+export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onCreate, initialData, isLoading }) => {
     const [formData, setFormData] = useState<NewTaskData>({});
 
     // ตั้งค่าเริ่มต้นให้ฟอร์มเมื่อ Modal ถูกเปิด
@@ -30,15 +30,15 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
         if (isOpen) {
             setFormData({
                 Task: '',
-                Phase: initialPhase || phaseOptions[0],
-                Owner: ownerOptions[0],
+                Phase: initialData?.phase || phaseOptions[0],
+                Owner: initialData?.owner || ownerOptions[0],
                 Status: 'Not Started',
                 Deadline: new Date().toISOString().split('T')[0],
                 'Est. Hours': 8,
                 'Impact Score': 3,
             });
         }
-    }, [isOpen, initialPhase]);
+    }, [isOpen, initialData]);
 
     if (!isOpen) return null;
 

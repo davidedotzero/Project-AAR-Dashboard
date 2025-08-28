@@ -192,7 +192,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              onOpenCreateTask(phase);
+                              onOpenCreateTask({phase:phase});
                             }}
                             className="ml-4 text-sm font-bold text-orange-500 hover:text-orange-700 transition-colors"
                             aria-label={`Add new task to ${phase}`}
