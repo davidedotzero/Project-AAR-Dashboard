@@ -1,12 +1,12 @@
 // components/DashboardTab.tsx (New File)
 import React, { useMemo, useState } from "react";
-import { useGlobalFilters } from "./GlobalFilterContext";
-import { useData } from "../contexts/DataContext";
-import { useUI } from "../contexts/UIContext";
+import { useGlobalFilters } from "@/components/GlobalFilterContext";
+import { useData } from "@/contexts/DataContext";
+import { useUI } from "@/contexts/UIContext";
 import { Project, Task } from "../types";
 
 // --- Helper Component: FilterDropdown ---
-const truncateText = (text: string | null | undefined, wordLimit: number): string => {
+const truncateText = (text: string, wordLimit: number): string => {
   if (!text) return "-";
   const words = text.split(" ");
   if (words.length <= wordLimit) {
@@ -74,11 +74,21 @@ const StatDisplayCard: React.FC<{
 );
 
 const RefreshIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
         <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
         <path d="M21 3v5h-5"/>
         <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
         <path d="M3 21v-5h5"/>
+    </svg>
+);
+
+const SortIcon: React.FC<{ direction: 'asc' | 'desc' }> = ({ direction }) => (
+    <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" stroke="currentColor">
+        {direction === 'asc' ? (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+        ) : (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        )}
     </svg>
 );
 
@@ -97,9 +107,14 @@ export const DashboardTab: React.FC = () => {
   const { projects, fetchAllTasks } = useData(); // <-- เพิ่ม fetchAllTasks
   const { openViewModal, openEditModal } = useUI();
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const handleStatFilterClick = (filterType: string) => {
     setActiveStatFilter(prev => (prev === filterType ? null : filterType));
+  };
+  
+  const handleSortByDeadline = () => {
+    setSortOrder(currentOrder => (currentOrder === 'asc' ? 'desc' : 'asc'));
   };
 
   const statDescriptions = {
@@ -146,7 +161,7 @@ export const DashboardTab: React.FC = () => {
     
     const avgLeadTime = tasksRequestingHelp.length > 0
         ? (totalLeadTime / tasksRequestingHelp.length).toFixed(1)
-        : '0';
+        : 'N/A';
 
     const metrics = {
         overdue: overdueCount,
@@ -213,13 +228,21 @@ export const DashboardTab: React.FC = () => {
 
     // 2. Sorting
     const sorted = [...tasksToProcess].sort((a, b) => {
-      const aDeadline = a.Deadline ? new Date(a.Deadline).getTime() : Infinity;
-      const bDeadline = b.Deadline ? new Date(b.Deadline).getTime() : Infinity;
-      return aDeadline - bDeadline;
+      const aHasDeadline = a.Deadline != null && a.Deadline !== '';
+      const bHasDeadline = b.Deadline != null && b.Deadline !== '';
+
+      if (aHasDeadline && !bHasDeadline) return -1;
+      if (!aHasDeadline && bHasDeadline) return 1;
+      if (!aHasDeadline && !bHasDeadline) return 0;
+
+      const aDeadline = new Date(a.Deadline!).getTime();
+      const bDeadline = new Date(b.Deadline!).getTime();
+      
+      return sortOrder === 'asc' ? aDeadline - bDeadline : bDeadline - aDeadline;
     });
 
     return sorted;
-  }, [filteredTasks, activeStatFilter]);
+  }, [filteredTasks, activeStatFilter, sortOrder]);
 
   if (isLoading && finalSortedTasks.length === 0) {
     return (
@@ -232,7 +255,7 @@ export const DashboardTab: React.FC = () => {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-gray-800">
-        รายการทั้งหมด
+        Dashboard & Global Filters
       </h1>
 
       {/* KPIs Summary Section */}
@@ -261,7 +284,7 @@ export const DashboardTab: React.FC = () => {
 
       {/* Filter Bar */}
       <div className="p-6 bg-white rounded-lg shadow-md border border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
           <FilterDropdown
             label="Owner (ทีม/ผู้รับผิดชอบ)"
             value={selections.owner}
@@ -283,6 +306,28 @@ export const DashboardTab: React.FC = () => {
             onChange={(val) => setFilter("status", val)}
             disabled={isLoading}
           />
+          {/* +++ START: เพิ่มช่องเลือกวันที่ +++ */}
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-2">วันที่เริ่มต้น (Deadline)</label>
+            <input
+                type="date"
+                value={selections.startDate || ''}
+                onChange={(e) => setFilter('startDate', e.target.value || null)}
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50"
+                disabled={isLoading}
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-2">วันที่สิ้นสุด (Deadline)</label>
+            <input
+                type="date"
+                value={selections.endDate || ''}
+                onChange={(e) => setFilter('endDate', e.target.value || null)}
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50"
+                disabled={isLoading}
+            />
+          </div>
+          {/* +++ END: เพิ่มช่องเลือกวันที่ +++ */}
         </div>
         <div className="flex flex-col">
           <label className="text-sm font-medium text-gray-700 mb-2">
@@ -317,11 +362,15 @@ export const DashboardTab: React.FC = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deadline</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <button onClick={handleSortByDeadline} className="flex items-center space-x-1 hover:text-gray-800 transition-colors">
+                    <span>Deadline</span>
+                    <SortIcon direction={sortOrder} />
+                </button>
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action (Task)</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operation (Project)</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Note/Result</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Help Assignee</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Help Details</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -335,8 +384,6 @@ export const DashboardTab: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{task.Owner || "-"}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-md" title={task.Task}>{task.Task}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm" title={getProjectName(task.ProjectID)}>{getProjectName(task.ProjectID)}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm"title={task['Notes / Result']}>
-                  {truncateText(task['Notes / Result'], 10)}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-medium">{task.HelpAssignee || "-"}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs" title={task.HelpDetails}>
                   {truncateText(task.HelpDetails, 10)}

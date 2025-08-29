@@ -91,7 +91,7 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
             </div>
 
             {/* Priority */}
-            <div>
+            {/* <div>
                 <label htmlFor="editPriority" className="block text-sm font-medium text-gray-700 mb-2">
                     ความสำคัญ (0=สูง, 10=ต่ำ)
                 </label>
@@ -106,7 +106,7 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
                     placeholder="ไม่ระบุ"
                     disabled={isLoading}
                 />
-            </div>
+            </div> */}
           </div>
 
           {/* Footer Actions */}

@@ -10,7 +10,8 @@ interface FilterSelections {
   projectId: string | null;
   status: string | null;
   searchQuery: string;
-  
+  startDate: string | null; // <-- เพิ่ม
+  endDate: string | null;   // <-- เพิ่ม
 }
 
 interface AvailableOptions {
@@ -31,7 +32,8 @@ interface GlobalFilterContextType {
 
 const GlobalFilterContext = createContext<GlobalFilterContextType | undefined>(undefined);
 
-const INITIAL_SELECTIONS: FilterSelections = { owner: null, projectId: null, status: null, searchQuery: "" };
+// --- เพิ่ม startDate และ endDate เข้าไปในค่าเริ่มต้น ---
+const INITIAL_SELECTIONS: FilterSelections = { owner: null, projectId: null, status: null, searchQuery: "", startDate: null, endDate: null };
 
 // --- Provider Component ---
 export const GlobalFilterProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -40,50 +42,65 @@ export const GlobalFilterProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   // --- Core Logic: Faceted Search (Cascading Options) & Filtering ---
   const { options, filteredTasks } = useMemo(() => {
-    const { owner, projectId, status, searchQuery } = selections;
+    const { owner, projectId, status, searchQuery, startDate, endDate } = selections; // <-- ดึงค่าวันที่มาใช้
     const query = searchQuery.toLowerCase().trim();
 
     const projectIds = new Set<string>();
     const statuses = new Set<string>();
     const finalFilteredTasks: Task[] = [];
 
-    // Helper function สำหรับการค้นหา (Action/Task/Notes)
     const matchesSearch = (task: Task): boolean => {
         if (!query) return true;
         const fieldsToSearch = [
-            task.Task,                  // Action (Task Name)
-            task["Notes / Result"],     // Notes
-            task.Owner,                 // ค้นหา Owner จากช่อง Search ได้ด้วย
+            task.Task,
+            task["Notes / Result"],
+            task.Owner,
         ];
         return fieldsToSearch.some(field =>
             typeof field === 'string' && field.toLowerCase().includes(query)
         );
     };
 
-    // วนลูป Task ทั้งหมดเพียงครั้งเดียว
     for (const task of allTasks) {
         const taskOwner = task.Owner || 'Unassigned';
 
-        // +++ START: ส่วนที่แก้ไข +++
-        // ตรวจสอบว่า Task ตรงกับ Owner ที่เลือกหรือไม่
-        // โดยเช็คทั้งช่อง Owner และช่อง HelpAssignee
         const matchesOwner = !owner || taskOwner === owner || task.HelpAssignee === owner;
-        // +++ END: ส่วนที่แก้ไข +++
-
         const matchesProject = !projectId || task.ProjectID === projectId;
         const matchesStatus = !status || task.Status === status;
         const matchesSearchCheck = matchesSearch(task);
 
-        // 1. Calculate Filtered Tasks (Matches ALL criteria)
-        if (matchesOwner && matchesProject && matchesStatus && matchesSearchCheck) {
+        // +++ START: เพิ่ม Logic การกรองตามช่วงวันที่ +++
+        const matchesDateRange = (() => {
+            if (!startDate && !endDate) return true; // ถ้าไม่ได้เลือกช่วงวันที่ ให้ผ่าน
+            if (!task.Deadline) return false; // Task ที่ไม่มี Deadline จะไม่ถูกแสดงเมื่อกรองด้วยวันที่
+
+            const taskDate = new Date(task.Deadline);
+            // ตั้งค่าเวลาเป็น 0 เพื่อเปรียบเทียบเฉพาะวันที่
+            taskDate.setHours(0, 0, 0, 0);
+
+            const start = startDate ? new Date(startDate) : null;
+            if (start) start.setHours(0, 0, 0, 0);
+
+            const end = endDate ? new Date(endDate) : null;
+            if (end) end.setHours(0, 0, 0, 0);
+
+            if (start && end) return taskDate >= start && taskDate <= end;
+            if (start) return taskDate >= start;
+            if (end) return taskDate <= end;
+            return true;
+        })();
+        // +++ END: เพิ่ม Logic การกรองตามช่วงวันที่ +++
+
+        // --- เพิ่ม matchesDateRange เข้าไปในเงื่อนไขสุดท้าย ---
+        if (matchesOwner && matchesProject && matchesStatus && matchesSearchCheck && matchesDateRange) {
             finalFilteredTasks.push(task);
         }
 
-        // 2. Calculate Available Options (Cascading Logic)
-        if (matchesOwner && matchesStatus && matchesSearchCheck) {
+        // --- Logic การสร้าง Options (ไม่มีการเปลี่ยนแปลง) ---
+        if (matchesOwner && matchesStatus && matchesSearchCheck && matchesDateRange) {
             projectIds.add(task.ProjectID);
         }
-        if (matchesOwner && matchesProject && matchesSearchCheck) {
+        if (matchesOwner && matchesProject && matchesSearchCheck && matchesDateRange) {
             if (task.Status) statuses.add(task.Status);
         }
     }

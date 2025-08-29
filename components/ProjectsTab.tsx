@@ -74,9 +74,9 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
               <h3 className="font-bold text-lg text-gray-800 flex-1 pr-4">
                 {p.Name}
               </h3>
-              <span className="text-sm font-semibold text-orange-600 bg-orange-100 px-2.5 py-1 rounded-full">
+              {/* <span className="text-sm font-semibold text-orange-600 bg-orange-100 px-2.5 py-1 rounded-full">
                 Priority: {p.Priority}
-              </span>
+              </span> */}
             </div>
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-gray-500 font-mono">{p.ProjectID}</p>
