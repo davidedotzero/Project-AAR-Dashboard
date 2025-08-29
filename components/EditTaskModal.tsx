@@ -325,6 +325,14 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 )}
                 {/* +++ END: Conditional "Help Me" Section +++ */}
 
+                <FormField label="Notes / Result">
+                  <textarea
+                    name="Notes / Result"
+                    value={formData['Notes / Result'] ?? ""}
+                    onChange={handleChange} className={baseInputClass} />
+                </FormField>
+
+
 
                 {/* <FormField label="Est. Hours">
                   <input type="number" name="Est. Hours" value={formData["Est. Hours"] ?? ""} onChange={handleChange} className={baseInputClass} />
