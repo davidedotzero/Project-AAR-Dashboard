@@ -48,7 +48,7 @@ const StatDisplayCard: React.FC<{
 );
 
 const RefreshIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
         <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
         <path d="M21 3v5h-5"/>
         <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
@@ -56,11 +56,20 @@ const RefreshIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const PlusIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+);
+
+
 interface TasksTabProps {
   tasks: Task[];
   onEditTask: (task: Task) => void;
   onTaskView: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
+  onOpenCreateTask: (defaults: {}) => void; // Added prop
 }
 
 export const TasksTab: React.FC<TasksTabProps> = ({
@@ -68,6 +77,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   onEditTask,
   onTaskView,
   onDeleteTask,
+  onOpenCreateTask, // Get prop
 }) => {
   const [ownerFilter, setOwnerFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -104,7 +114,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   };
 
   // --- KPIs Calculation ---
-  const { statusMetrics, avgHelpLeadTime } = useMemo(() => {
+  const { statusMetrics } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -121,25 +131,6 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     const doneCount = tasks.filter(t => t.Status === 'Done').length;
     const helpMeCount = tasks.filter(t => t.Status === 'Help Me').length;
     
-    const tasksRequestingHelp = tasks.filter(
-        t => t.Status === 'Help Me' && t.HelpRequestedAt && t.Deadline
-    );
-
-    let totalLeadTime = 0;
-    if (tasksRequestingHelp.length > 0) {
-        tasksRequestingHelp.forEach(task => {
-            const requestDate = new Date(task.HelpRequestedAt!);
-            const deadlineDate = new Date(task.Deadline!);
-            const diffTime = deadlineDate.getTime() - requestDate.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            totalLeadTime += diffDays;
-        });
-    }
-    
-    const avgLeadTime = tasksRequestingHelp.length > 0
-        ? (totalLeadTime / tasksRequestingHelp.length).toFixed(1)
-        : 'N/A';
-
     const metrics = {
         overdue: overdueCount,
         warning: warningCount,
@@ -148,7 +139,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
         helpMe: helpMeCount,
     };
 
-    return { statusMetrics: metrics, avgHelpLeadTime: avgLeadTime };
+    return { statusMetrics: metrics };
   }, [tasks]);
 
   const filteredAndSortedTasks = useMemo(() => {
@@ -224,6 +215,16 @@ export const TasksTab: React.FC<TasksTabProps> = ({
 
       {/* Filter Section */}
       <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="flex justify-between items-center mb-4">
+            <h3 className="text-md font-bold text-gray-700">ตัวกรองและเครื่องมือ</h3>
+            <button 
+                onClick={() => onOpenCreateTask({})}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition duration-150 flex items-center space-x-2"
+            >
+                <PlusIcon className="w-4 h-4" />
+                <span>เพิ่ม Task</span>
+            </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="text-sm font-medium text-gray-700 mb-1 block">Owner / Assignee</label>

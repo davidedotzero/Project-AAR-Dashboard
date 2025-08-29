@@ -344,7 +344,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
               projectId: newProjectId,
               projectName: projectName,
               priority: priority,
-              selectedTaskNames: selectedTasks,
+              selectedTasks: selectedTasks,
             },
           }),
           headers: { "Content-Type": "text/plain;charset=utf-8" },

@@ -135,10 +135,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               <label htmlFor="project-name" className="block text-sm font-medium text-gray-700 mb-1">ชื่อโปรเจกต์</label>
               <input type="text" id="project-name" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="เช่น แคมเปญการตลาด Q4" required />
             </div>
-            {/* <div className="w-48">
+            <div className="w-48">
               <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">ความสำคัญ (0=สูง, 10=ต่ำ)</label>
               <input type="number" id="priority" min="0" max="10" value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="5" disabled={isLoading} />
-            </div> */}
+            </div>
           </div>
 
           {/* Task Selection Section */}
