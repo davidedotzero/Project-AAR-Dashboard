@@ -4,6 +4,8 @@ import { useGlobalFilters } from "@/components/GlobalFilterContext";
 import { useData } from "@/contexts/DataContext";
 import { useUI } from "@/contexts/UIContext";
 import { Project, Task } from "../types";
+import { useAuth } from "@/contexts/AuthContext"; // [✅ เพิ่ม]
+import { canEditTask } from "@/utils/authUtils"; // [✅ เพิ่ม]
 
 // --- Helper Component: FilterDropdown ---
 const truncateText = (text: string, wordLimit: number): string => {
@@ -32,9 +34,9 @@ const FilterDropdown: React.FC<{
       disabled={disabled || options.length === 0}
     >
       <option value="">-- ทั้งหมด ({options.length}) --</option>
-      {options.map((opt) =>
+      {options.map((opt, index) =>
         typeof opt === "string" ? (
-          <option key={opt} value={opt}>
+          <option key={`${opt}-${index}`} value={opt}>
             {opt}
           </option>
         ) : (
@@ -59,9 +61,8 @@ const StatDisplayCard: React.FC<{
   <div className="relative group flex justify-center">
     <button
       onClick={onClick}
-      className={`flex items-center space-x-2 p-3 bg-gray-50 rounded-lg w-full text-left transition-all duration-200 ${
-        isActive ? 'ring-2 ring-orange-500 shadow-md' : 'hover:bg-gray-100'
-      }`}
+      className={`flex items-center space-x-2 p-3 bg-gray-50 rounded-lg w-full text-left transition-all duration-200 ${isActive ? 'ring-2 ring-orange-500 shadow-md' : 'hover:bg-gray-100'
+        }`}
     >
       <span className={`font-bold text-xl ${color}`}>{value}</span>
       <span className="text-sm text-gray-600">{label}</span>
@@ -74,27 +75,28 @@ const StatDisplayCard: React.FC<{
 );
 
 const RefreshIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-        <path d="M21 3v5h-5"/>
-        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-        <path d="M3 21v-5h5"/>
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+    <path d="M21 3v5h-5" />
+    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+    <path d="M3 21v-5h5" />
+  </svg>
 );
 
 const SortIcon: React.FC<{ direction: 'asc' | 'desc' }> = ({ direction }) => (
-    <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" stroke="currentColor">
-        {direction === 'asc' ? (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-        ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        )}
-    </svg>
+  <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" stroke="currentColor">
+    {direction === 'asc' ? (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+    ) : (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    )}
+  </svg>
 );
 
 
 // --- Main Component: DashboardTab ---
 export const DashboardTab: React.FC = () => {
+  const { user } = useAuth(); // [✅ เพิ่ม]
   const {
     selections,
     options,
@@ -104,7 +106,7 @@ export const DashboardTab: React.FC = () => {
     isLoading,
     filteredTasks, // These are the tasks filtered by the global dropdowns
   } = useGlobalFilters();
-  const { projects, fetchAllTasks } = useData(); // <-- เพิ่ม fetchAllTasks
+  const { projects, refreshAllData } = useData();
   const { openViewModal, openEditModal } = useUI();
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -112,7 +114,7 @@ export const DashboardTab: React.FC = () => {
   const handleStatFilterClick = (filterType: string) => {
     setActiveStatFilter(prev => (prev === filterType ? null : filterType));
   };
-  
+
   const handleSortByDeadline = () => {
     setSortOrder(currentOrder => (currentOrder === 'asc' ? 'desc' : 'asc'));
   };
@@ -136,39 +138,42 @@ export const DashboardTab: React.FC = () => {
     const incompleteTasks = filteredTasks.filter(t => t.Status !== 'Done' && t.Status !== 'Cancelled');
     const overdueCount = incompleteTasks.filter(t => t.Deadline && new Date(t.Deadline) < today).length;
     const warningCount = incompleteTasks.filter(t => {
-        if (!t.Deadline) return false;
-        const deadlineDate = new Date(t.Deadline);
-        return deadlineDate >= today && deadlineDate <= warningDate;
+      if (!t.Deadline) return false;
+      const deadlineDate = new Date(t.Deadline);
+      return deadlineDate >= today && deadlineDate <= warningDate;
     }).length;
     const doneCount = filteredTasks.filter(t => t.Status === 'Done').length;
     const helpMeCount = filteredTasks.filter(t => t.Status === 'Help Me').length;
 
-    // Calculate Help Lead Time
     const tasksRequestingHelp = filteredTasks.filter(
-        t => t.Status === 'Help Me' && t.HelpRequestedAt && t.Deadline
+      t => t.Status === 'Help Me' && t.HelpRequestedAt && t.Deadline
     );
 
     let totalLeadTime = 0;
+    let validRequests = 0;
     if (tasksRequestingHelp.length > 0) {
-        tasksRequestingHelp.forEach(task => {
-            const requestDate = new Date(task.HelpRequestedAt!);
-            const deadlineDate = new Date(task.Deadline!);
-            const diffTime = deadlineDate.getTime() - requestDate.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            totalLeadTime += diffDays;
-        });
+      tasksRequestingHelp.forEach(task => {
+        const requestDate = new Date(task.HelpRequestedAt!);
+        const deadlineDate = new Date(task.Deadline!);
+        if (!isNaN(requestDate.getTime()) && !isNaN(deadlineDate.getTime())) {
+          const diffTime = deadlineDate.getTime() - requestDate.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          totalLeadTime += diffDays;
+          validRequests++;
+        }
+      });
     }
-    
+
     const avgLeadTime = tasksRequestingHelp.length > 0
-        ? (totalLeadTime / tasksRequestingHelp.length).toFixed(1)
-        : 'N/A';
+      ? (totalLeadTime / tasksRequestingHelp.length).toFixed(1)
+      : 'N/A';
 
     const metrics = {
-        overdue: overdueCount,
-        warning: warningCount,
-        incomplete: incompleteTasks.length,
-        done: doneCount,
-        helpMe: helpMeCount,
+      overdue: overdueCount,
+      warning: warningCount,
+      incomplete: incompleteTasks.length,
+      done: doneCount,
+      helpMe: helpMeCount,
     };
 
     return { statusMetrics: metrics, avgHelpLeadTime: avgLeadTime };
@@ -197,7 +202,7 @@ export const DashboardTab: React.FC = () => {
 
     const warningDate = new Date(today);
     warningDate.setDate(today.getDate() + 10);
-    
+
     let tasksToProcess = filteredTasks;
 
     // 1. Apply Stat Card Filtering
@@ -237,7 +242,7 @@ export const DashboardTab: React.FC = () => {
 
       const aDeadline = new Date(a.Deadline!).getTime();
       const bDeadline = new Date(b.Deadline!).getTime();
-      
+
       return sortOrder === 'asc' ? aDeadline - bDeadline : bDeadline - aDeadline;
     });
 
@@ -261,10 +266,10 @@ export const DashboardTab: React.FC = () => {
       {/* KPIs Summary Section */}
       <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="flex justify-between items-center mb-3">
-            <h3 className="text-md font-bold text-gray-700">สรุปสถานะ Task (จากผลการกรอง)</h3>
-            <button onClick={fetchAllTasks} className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-full transition-colors" aria-label="Refresh data">
-                <RefreshIcon className="w-5 h-5" />
-            </button>
+          <h3 className="text-md font-bold text-gray-700">สรุปสถานะ Task (จากผลการกรอง)</h3>
+          <button onClick={{ refreshAllData }} className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-full transition-colors" aria-label="Refresh data">
+            <RefreshIcon className="w-5 h-5" />
+          </button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <StatDisplayCard label="Overdue" value={statusMetrics.overdue} color="text-red-500" isActive={activeStatFilter === 'Overdue'} onClick={() => handleStatFilterClick('Overdue')} description={statDescriptions.overdue} />
@@ -274,11 +279,12 @@ export const DashboardTab: React.FC = () => {
           <StatDisplayCard label="Help Me" value={statusMetrics.helpMe} color="text-purple-500" isActive={activeStatFilter === 'Help Me'} onClick={() => handleStatFilterClick('Help Me')} description={statDescriptions.helpMe} />
         </div>
         <div className="mt-4 pt-4 border-t">
-            <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm font-medium text-gray-700">ระยะเวลาเฉลี่ยที่ขอความช่วยเหลือก่อน Deadline:</span>
-                <span className="ml-2 font-bold text-lg text-gray-800">{avgHelpLeadTime}</span>
-                <span className="ml-1 text-sm text-gray-600">วัน</span>
-            </div>
+          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+            <span className="text-sm font-medium text-gray-700">ระยะเวลาเฉลี่ยที่ขอความช่วยเหลือก่อน Deadline:</span>
+            <span className="ml-2 font-bold text-lg text-gray-800">{avgHelpLeadTime}</span>
+            {/* [✅ แก้ไข] แสดงหน่วย "วัน" เมื่อมีค่าเท่านั้น */}
+            {avgHelpLeadTime !== 'N/A' && <span className="ml-1 text-sm text-gray-600">วัน</span>}
+          </div>
         </div>
       </div>
 
@@ -310,21 +316,21 @@ export const DashboardTab: React.FC = () => {
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 mb-2">วันที่เริ่มต้น (Deadline)</label>
             <input
-                type="date"
-                value={selections.startDate || ''}
-                onChange={(e) => setFilter('startDate', e.target.value || null)}
-                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50"
-                disabled={isLoading}
+              type="date"
+              value={selections.startDate || ''}
+              onChange={(e) => setFilter('startDate', e.target.value || null)}
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50"
+              disabled={isLoading}
             />
           </div>
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 mb-2">วันที่สิ้นสุด (Deadline)</label>
             <input
-                type="date"
-                value={selections.endDate || ''}
-                onChange={(e) => setFilter('endDate', e.target.value || null)}
-                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50"
-                disabled={isLoading}
+              type="date"
+              value={selections.endDate || ''}
+              onChange={(e) => setFilter('endDate', e.target.value || null)}
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50"
+              disabled={isLoading}
             />
           </div>
           {/* +++ END: เพิ่มช่องเลือกวันที่ +++ */}
@@ -364,8 +370,8 @@ export const DashboardTab: React.FC = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <button onClick={handleSortByDeadline} className="flex items-center space-x-1 hover:text-gray-800 transition-colors">
-                    <span>Deadline</span>
-                    <SortIcon direction={sortOrder} />
+                  <span>Deadline</span>
+                  <SortIcon direction={sortOrder} />
                 </button>
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
@@ -379,25 +385,30 @@ export const DashboardTab: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {finalSortedTasks.map((task) => (
-              <tr key={task._id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDateToDDMMYYYY(task.Deadline)}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{task.Owner || "-"}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-md" title={task.Task}>{task.Task}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm" title={getProjectName(task.ProjectID)}>{getProjectName(task.ProjectID)}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm"title={task['Notes / Result']}>
-                  {truncateText(task['Notes / Result'], 10)}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-medium">{task.HelpAssignee || "-"}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs" title={task.HelpDetails}>
-                  {truncateText(task.HelpDetails, 10)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{task.Status}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => openViewModal(task, finalSortedTasks)} className="text-indigo-600 hover:text-indigo-900 mr-3">View</button>
-                  <button onClick={() => openEditModal(task)} className="text-orange-600 hover:text-orange-900">Edit</button>
-                </td>
-              </tr>
-            ))}
+            {finalSortedTasks.map((task) => {
+              const userCanEdit = canEditTask(user, task);
+              return (
+                <tr key={task._id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDateToDDMMYYYY(task.Deadline)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{task.Owner || "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-md" title={task.Task}>{task.Task}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm" title={getProjectName(task.ProjectID)}>{getProjectName(task.ProjectID)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm" title={task['Notes / Result']}>
+                    {truncateText(task['Notes / Result'], 10)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-medium">{task.HelpAssignee || "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs" title={task.HelpDetails}>
+                    {truncateText(task.HelpDetails, 10)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{task.Status}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    {userCanEdit && (
+                      // <button onClick={() => openViewModal(task, finalSortedTasks)} className="text-indigo-600 hover:text-indigo-900 mr-3">View</button>
+                      <button onClick={() => openEditModal(task)} className="text-orange-600 hover:text-orange-900">Edit</button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {finalSortedTasks.length === 0 && !isLoading && (

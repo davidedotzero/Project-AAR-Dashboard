@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import type { Project } from "../types";
 import { DeleteIcon, EditIcon } from "./icons";
 import { useUI } from '../contexts/UIContext';
+import { useAuth } from '../contexts/AuthContext'; // [✅ เพิ่ม]
+import { isAdmin } from '../utils/authUtils'; // [✅ เพิ่ม]
 
 interface ProjectsTabProps {
   projects: Project[];
@@ -16,6 +18,9 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
 }) => {
   const { openCreateProjectModal, openEditProjectModal } = useUI();
   const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useAuth(); // [✅ เพิ่ม]
+
+  const userIsAdmin = isAdmin(user);
 
   // Filter projects based on search query first
   const filteredProjects = useMemo(() => {
@@ -38,11 +43,12 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
         <h1 className="text-2xl font-bold text-gray-800">
           โปรเจกต์ทั้งหมด ({sortedProjects.length})
         </h1>
+        {/* สิทธิ์การสร้างโปรเจกต์เปิดกว้างใน Backend จึงแสดงปุ่มได้ */}
         <button
-            onClick={openCreateProjectModal}
-            className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-5 rounded-lg shadow-md transition duration-150"
+          onClick={openCreateProjectModal}
+          className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-5 rounded-lg shadow-md transition duration-150"
         >
-            + สร้างโปรเจกต์
+          + สร้างโปรเจกต์
         </button>
       </div>
 
@@ -80,36 +86,39 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
             </div>
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-gray-500 font-mono">{p.ProjectID}</p>
-              <div className="flex items-center space-x-1">
-                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openEditProjectModal(p);
-                  }}
-                  className="text-gray-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-100"
-                  aria-label="Edit Project"
-                >
-                  <EditIcon />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteProject(p);
-                  }}
-                  className="text-gray-500 hover:text-red-600 p-2 rounded-full hover:bg-red-100"
-                  aria-label="Delete Project"
-                >
-                  <DeleteIcon />
-                </button>
-              </div>
+              {/* [✅ แก้ไข] แสดงปุ่มเฉพาะ Admin เท่านั้น */}
+              {userIsAdmin && (
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditProjectModal(p);
+                    }}
+                    className="text-gray-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-100"
+                    aria-label="Edit Project"
+                  >
+                    <EditIcon />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteProject(p);
+                    }}
+                    className="text-gray-500 hover:text-red-600 p-2 rounded-full hover:bg-red-100"
+                    aria-label="Delete Project"
+                  >
+                    <DeleteIcon />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}
       </div>
       {sortedProjects.length === 0 && (
-          <div className="text-center py-10 text-gray-500 bg-white rounded-lg shadow-sm border">
-              ไม่พบโปรเจกต์ที่ตรงกับคำค้นหา
-          </div>
+        <div className="text-center py-10 text-gray-500 bg-white rounded-lg shadow-sm border">
+          ไม่พบโปรเจกต์ที่ตรงกับคำค้นหา
+        </div>
       )}
     </div>
   );

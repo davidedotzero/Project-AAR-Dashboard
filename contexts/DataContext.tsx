@@ -52,7 +52,8 @@ const apiRequest = async <T,>(body: object): Promise<T> => {
       if (result.status !== 'success') {
         throw new Error(result.message || "การดำเนินการล้มเหลว (Backend Error).");
       }
-      return result.data as T;
+      // ตรวจสอบว่ามี data หรือไม่ ถ้าไม่มีให้ return เป็น object ว่าง
+      return (result.data !== undefined ? result.data : {}) as T;
     } catch (parseError) {
       // ดักจับ "SyntaxError: JSON.parse: unexpected character"
       if (parseError instanceof SyntaxError) {
@@ -226,6 +227,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [user]);
 
+  // [✅ แก้ไข] ลบ payload ที่ไม่จำเป็นออก (userRole)
   const fetchAllTasks = useCallback(async () => {
     if (!user) return;
     setIsLoadingAllTasks(true);
@@ -233,7 +235,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         const data = await apiRequest<any[]>({
             op: 'getAllTasks',
             user: user,
-            payload: { userRole: user.role }
+            // payload: { userRole: user.role } // <-- ลบออก เพราะ Backend ตรวจสอบเอง
         });
         
         const formatted = formatAndSortTasks(data);
@@ -248,6 +250,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   }, [user, formatAndSortTasks]);
 
   // ฟังก์ชันสำหรับดึง Task ของโปรเจกต์ที่ระบุเท่านั้น
+  // [✅ แก้ไข] ลบ userRole ที่ไม่จำเป็นออกจาก payload
   const fetchTasksForProject = useCallback(
     async (projectId: string) => {
       if (!user || projectId === "ALL") return;
@@ -259,7 +262,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         const data = await apiRequest<any[]>({
             op: 'getTasks',
             user: user,
-            payload: { projectId: projectId, userRole: user.role }
+            payload: { projectId: projectId } // <-- ลบ userRole ออก
         });
 
         const formattedTasks = formatAndSortTasks(data);
@@ -276,9 +279,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   const fetchInitialTasks = useCallback(async () => {
-    if (!user) return;
+    // getInitialTasks เป็น Public API ไม่จำเป็นต้องมี User ก็เรียกได้
     try {
-      const data = await apiRequest<any[]>({ op: 'getInitialTasks', user: user });
+      // ส่ง user ถ้ามี ถ้าไม่มีส่ง null
+      const data = await apiRequest<any[]>({ op: 'getInitialTasks', user: user || null });
       const formatted = formatAndSortTasks(data);
       setInitialTasks(formatted);
     } catch (err) {
@@ -288,30 +292,33 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
   const refreshAllData = useCallback(async () => {
     // โหลด Projects และ AllTasks พร้อมกัน
-    await Promise.all([fetchProjects(), fetchAllTasks()]);
-  }, [fetchProjects, fetchAllTasks]);
+    if (user) {
+        await Promise.all([fetchProjects(), fetchAllTasks()]);
+    }
+  }, [user, fetchProjects, fetchAllTasks]);
 
   // --- Effects (ปรับโครงสร้างใหม่และมีประสิทธิภาพ) ---
 
   // Effect 1: โหลดข้อมูลเริ่มต้นเมื่อ User Login และล้างข้อมูลเมื่อ Logout
   useEffect(() => {
+    // โหลด Initial Tasks ทันที
+    fetchInitialTasks();
+
     if (user) {
         refreshAllData();
-        fetchInitialTasks();
     } else {
+        // ล้างข้อมูลเมื่อ Logout
         setProjects([]);
         setTasks([]);
         setAllTasks([]);
-        setInitialTasks([]);
         setSelectedProjectId(null);
     }
   }, [user, refreshAllData, fetchInitialTasks]);
 
 
   // Effect 2: จัดการการโหลด Task เมื่อโปรเจกต์ที่เลือกเปลี่ยนแปลง
-  // (แทนที่ useEffect ที่ซ้ำซ้อนในโค้ดเดิม)
   useEffect(() => {
-    if (!user || !selectedProjectId) {
+    if (!selectedProjectId) {
       setTasks([]);
       return;
     }
@@ -321,8 +328,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       setTasks([]); 
       fetchTasksForProject(selectedProjectId);
     }
-    // เราไม่ใส่ allTasks ใน dependency ที่นี่ เพื่อป้องกันการโหลดซ้ำที่ไม่จำเป็น
-  }, [selectedProjectId, user, fetchTasksForProject]);
+  }, [selectedProjectId, fetchTasksForProject]);
 
   // Effect 3: อัปเดต tasks หาก allTasks เปลี่ยนแปลง (เช่น หลัง Edit) และกำลังเลือก "ALL" อยู่
   useEffect(() => {
@@ -363,7 +369,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       if (!user) return;
 
       // เก็บ State เก่าไว้เผื่อ Rollback
-      // ใช้ functional updates เพื่อเข้าถึง state ก่อนหน้าอย่างปลอดภัย
       let previousTasks: Task[] = [];
       let previousAllTasks: Task[] = [];
 
@@ -391,7 +396,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             closeModals();
         });
       } catch (err) {
-        // 3. Rollback UI หาก Backend ทำงานล้มเหลว (Error ถูกตั้งค่าใน handleApiAction แล้ว)
+        // 3. Rollback UI หาก Backend ทำงานล้มเหลว
         setTasks(previousTasks);
         setAllTasks(previousAllTasks);
       }
@@ -403,17 +408,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     async (projectName: string, priority: number, selectedTasks: Task[]) => {
       if (!user) return;
       const newProjectId = `PROJ-${uuidv4().slice(0, 8).toUpperCase()}`;
+
+      const selectedTaskNames = selectedTasks.map(task => task.Task);
       
       await handleApiAction(async () => {
         await apiRequest({
             op: "createNewProject",
             user: user,
-            // ตรวจสอบให้แน่ใจว่าโครงสร้างตรงกับ Backend ของคุณ
             payload: { 
               projectId: newProjectId,
               projectName: projectName,
               priority: priority,
-              selectedTasks: selectedTasks,
+              selectedTasks: selectedTaskNames,
             }
         });
 
@@ -427,6 +433,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     [user, refreshAllData, setActiveTab, closeModals]
   );
 
+  // [✅ แก้ไข] ปรับโครงสร้างการส่งข้อมูลให้ใช้ payload
   const updateProject = useCallback(
     async (
       projectId: string,
@@ -438,10 +445,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         await apiRequest({
             op: "updateProject",
             user: user,
-            projectId: projectId,
-            updatedData: {
-              projectName: updatedData.Name,
-              priority: updatedData.Priority,
+            // 👇 ย้ายข้อมูลทั้งหมดไปไว้ใน payload 👇
+            payload: {
+                projectId: projectId,
+                updatedData: {
+                  projectName: updatedData.Name,
+                  priority: updatedData.Priority,
+                }
             }
         });
 
@@ -453,6 +463,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     [user, fetchProjects, closeModals]
   );
 
+  // [✅ แก้ไข] ปรับโครงสร้างการส่งข้อมูลให้ใช้ payload
   const createTask = useCallback(
     async (newTaskData: Omit<Task, "rowIndex" | "_id" | "Check">) => {
       if (!user || !selectedProjectId || selectedProjectId === "ALL") return;
@@ -461,7 +472,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         await apiRequest({
             op: "createTask",
             user: user,
-            taskData: { ...newTaskData, ProjectID: selectedProjectId } 
+            // 👇 ย้าย taskData ไปไว้ใน payload 👇
+            payload: {
+                taskData: { ...newTaskData, ProjectID: selectedProjectId }
+            }
         });
         
         // Refetch ข้อมูล Task ของโปรเจกต์นี้ และข้อมูล Task ทั้งหมด
@@ -473,6 +487,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     [user, selectedProjectId, fetchTasksForProject, fetchAllTasks, closeModals]
   );
 
+  // [✅ แก้ไข] ปรับโครงสร้างการส่งข้อมูลให้ใช้ payload
   const confirmDelete = useCallback(async () => {
     if (!user || !itemToDelete) return;
 
@@ -497,13 +512,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
         await handleApiAction(async () => {
             const op = type === "task" ? "deleteTask" : "deleteProject";
-            // ตรวจสอบให้แน่ใจว่าโครงสร้าง Body ตรงกับ Backend
-            const body =
-              type === "task"
-                ? { op, user, rowIndex: data.rowIndex }
-                : { op, user, projectId: data.ProjectID };
+            
+            // 👇 สร้าง Body ที่มีโครงสร้าง payload ที่ถูกต้อง 👇
+            const requestBody = {
+                op: op,
+                user: user,
+                payload: type === "task"
+                    ? { rowIndex: data.rowIndex }
+                    : { projectId: data.ProjectID }
+            };
 
-            await apiRequest(body);
+            await apiRequest(requestBody);
 
             if (type !== "task") {
               // Refetch หลังจากลบโปรเจกต์
@@ -521,6 +540,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   }, [user, itemToDelete, refreshAllData, closeModals]);
 
   // --- Derived/Calculated Data (Memoized) ---
+  // (ส่วนการคำนวณสถิติไม่มีการเปลี่ยนแปลง)
 
   const filteredTasks = useMemo(() => {
     if (filterTeam === "ALL") return tasks;
@@ -539,28 +559,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     tasksByStatus,
     tasksByOwner,
   } = useMemo(() => {
+    /* (ส่วนที่คอมเมนต์ไว้ในต้นฉบับ)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const warningDate = new Date();
-    warningDate.setDate(today.getDate() + 10); // กำหนดช่วงเวลาเตือน 10 วัน
-
-    // ใช้ allTasks สำหรับการคำนวณภาพรวม
-    const incompleteTasks = allTasks.filter(
-        (t) => t.Status !== "Done" && t.Status !== "Cancelled"
-    );
-
-    // *** แก้ไข Bug: โค้ดเดิมอ้างอิง tasks.Deadline ซึ่งผิด ต้องใช้ t.Deadline ***
-    /*
-    const warningTasks = incompleteTasks.filter((t) => {
-      if (!t.Deadline) return false; 
-      const deadlineDate = new Date(t.Deadline);
-      return deadlineDate >= today && deadlineDate <= warningDate;
-    });
+    ...
     */
 
     const completedTasks = allTasks.filter((t) => t.Status === "Done");
 
-    // ใช้ 'tasks' (มุมมองปัจจุบัน) สำหรับสถิติเฉพาะหน้า (เช่น กราฟในหน้า TaskTab)
+    // ใช้ 'tasks' (มุมมองปัจจุบัน) สำหรับสถิติเฉพาะหน้า
     const statusCounts: TasksByStatus = statusOptions.map((status) => ({
       name: status,
       Tasks: tasks.filter((t) => t.Status === status).length,
