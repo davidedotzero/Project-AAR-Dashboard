@@ -43,7 +43,7 @@ interface DataContextType {
   createProject: (
     projectName: string,
     priority: number,
-    selectedTasks: string[]
+    selectedTasks: Task[]
   ) => Promise<void>;
   updateProject: (
     projectId: string,
@@ -332,7 +332,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   const createProject = useCallback(
-    async (projectName: string, priority: number, selectedTasks: string[]) => {
+    async (projectName: string, priority: number, selectedTasks: Task[]) => {
       setLoadingMessage("กำลังสร้างโปรเจกต์...");
       const newProjectId = `PROJ-${uuidv4().slice(0, 8).toUpperCase()}`;
       try {
