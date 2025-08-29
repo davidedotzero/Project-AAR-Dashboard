@@ -5,8 +5,10 @@ import {
   FolderKanbanIcon,
   MenuIcon,
   CloseIcon,
+  UserCircleIcon,
 } from "@/components/icons";
 import type { Project } from "../types";
+import { useAuth } from "../contexts/AuthContext";
 
 interface TabButtonProps {
   id: string;
@@ -52,9 +54,17 @@ export const Header: React.FC<HeaderProps> = ({
   setSelectedProjectId,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user } = useAuth();
 
   const navLinks = (
     <>
+      <TabButton
+        id="profile"
+        label={user?.name || "Profile"}
+        icon={<UserCircleIcon />}
+        activeTab={activeTab}
+        onClick={setActiveTab}
+      />
       <TabButton
         id="dashboard"
         label="รายการทั้งหมด"
@@ -72,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
       <TabButton
         id="tasks"
         label="รายการ Task"
-        icon={<FolderKanbanIcon />} // You might want a different icon
+        icon={<FolderKanbanIcon />}
         activeTab={activeTab}
         onClick={setActiveTab}
       />

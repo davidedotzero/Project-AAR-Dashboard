@@ -11,9 +11,66 @@ import React, {
 import type { Project, Task, TasksByOwner, TasksByStatus } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { statusOptions, ownerOptions } from "../constants";
-import { useUI } from "./UIContext"; // Import useUI
+import { useUI } from "./UIContext";
+import { useAuth } from "./AuthContext";
 
 const SCRIPT_URL = import.meta.env.VITE_APP_SCRIPT_URL;
+
+// --- Helper Function for Robust API Requests ---
+
+/**
+ * จัดการการเรียก API ไปยัง Google Apps Script
+ * ตรวจสอบ Error และรับประกันการ Parse ข้อมูล JSON อย่างปลอดภัย
+ */
+const apiRequest = async <T,>(body: object): Promise<T> => {
+  if (!SCRIPT_URL) {
+    throw new Error("VITE_APP_SCRIPT_URL is not defined.");
+  }
+  
+  try {
+    const response = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      // ใช้ text/plain เพื่อหลีกเลี่ยงปัญหา CORS preflight กับ Google Apps Script
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body),
+    });
+
+    // 1. ตรวจสอบ HTTP Status
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "N/A");
+      console.error("HTTP Error Response:", errorText);
+      throw new Error(`HTTP error ${response.status}. โปรดตรวจสอบการเชื่อมต่อหรือสถานะเซิร์ฟเวอร์.`);
+    }
+
+    // 2. อ่านข้อมูลเป็น Text ก่อน (สำคัญมากสำหรับการ Debug และป้องกัน JSON Error)
+    const textData = await response.text();
+
+    // 3. พยายามแปลงเป็น JSON
+    try {
+      const result = JSON.parse(textData);
+      // ตรวจสอบสถานะจาก Backend (ตามโครงสร้างที่คาดหวังจาก GAS)
+      if (result.status !== 'success') {
+        throw new Error(result.message || "การดำเนินการล้มเหลว (Backend Error).");
+      }
+      return result.data as T;
+    } catch (parseError) {
+      // ดักจับ "SyntaxError: JSON.parse: unexpected character"
+      if (parseError instanceof SyntaxError) {
+          console.error("Failed to parse JSON. Raw data received:", textData);
+          throw new Error("ได้รับข้อมูลที่ไม่ใช่รูปแบบ JSON. โปรดตรวจสอบ Logs หรือสิทธิ์ของ Google Apps Script.");
+      }
+      throw parseError;
+    }
+  } catch (error) {
+    // จัดการ Network errors
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ (Network Error/CORS).');
+    }
+    throw error;
+  }
+};
+
+// --- Context Definition (ปรับปรุง Loading States) ---
 
 interface DataContextType {
   // Data State
@@ -21,11 +78,13 @@ interface DataContextType {
   tasks: Task[];
   initialTasks: Task[];
   selectedProjectId: string | null;
-  allTsks: Task[];
-  isLoadingAllTasks: boolean;
+  allTasks: Task[];
 
   // Status State
-  loadingMessage: string | null;
+  isLoadingProjects: boolean;
+  isLoadingTasks: boolean;
+  isLoadingAllTasks: boolean;
+  isOperating: boolean; // สำหรับ Create/Update/Delete
   error: string | null;
 
   // Derived Data
@@ -53,27 +112,31 @@ interface DataContextType {
     newTaskData: Omit<Task, "rowIndex" | "_id" | "Check">
   ) => Promise<void>;
   confirmDelete: () => Promise<void>;
+  refreshAllData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+// --- Provider Component ---
+
 export const DataProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  // เข้าถึง UI Context
+  const { user } = useAuth();
   const { filterTeam, itemToDelete, closeModals, setActiveTab } = useUI();
 
   // Data States
   const [projects, setProjects] = useState<Project[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]); // Task ของโปรเจกต์ปัจจุบัน
+  const [allTasks, setAllTasks] = useState<Task[]>([]); // Task ทั้งหมดในระบบ
   const [initialTasks, setInitialTasks] = useState<Task[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    null
-  );
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
-  // Status States
-  const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
+  // Status States (ปรับปรุงใหม่)
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [isLoadingAllTasks, setIsLoadingAllTasks] = useState(false);
+  const [isOperating, setIsOperating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // --- Utility Functions & Constants ---
@@ -92,15 +155,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
   const formatAndSortTasks = useCallback(
     (data: any[]): Task[] => {
+        if (!Array.isArray(data)) return [];
+
       const sortedData = [...data].sort((a, b) => {
         const phaseAIndex = phaseOrder.indexOf(a.Phase);
         const phaseBIndex = phaseOrder.indexOf(b.Phase);
         if (phaseAIndex === phaseBIndex) return 0;
-        return phaseAIndex - phaseBIndex;
+        return phaseAIndex < phaseBIndex ? -1 : 1;
       });
 
-      return sortedData.map((t: any, index: number) => ({
-        _id: `${t.ProjectID}-${t.rowIndex}-${index}`,
+      return sortedData.map((t: any) => ({
+        // สร้าง _id ที่เสถียร
+        _id: t.ProjectID && t.rowIndex ? `${t.ProjectID}-${t.rowIndex}` : `temp-${uuidv4()}`,
         rowIndex: t.rowIndex,
         ProjectID: t.ProjectID,
         Check:
@@ -127,177 +193,162 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     [phaseOrder]
   );
 
-  // --- API Calls ---
+  // --- API Calls (Refactored) ---
 
   const fetchProjects = useCallback(async () => {
-    if (
-      !SCRIPT_URL ||
-      SCRIPT_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")
-    ) {
-      setError("กรุณาตั้งค่า URL ของ Google Apps Script (VITE_APP_SCRIPT_URL)");
-      return;
-    }
-    setLoadingMessage("กำลังโหลดโปรเจกต์...");
+    if (!user) return;
+    setIsLoadingProjects(true);
     setError(null);
     try {
-      const res = await fetch(`${SCRIPT_URL}?op=getProjects`);
-      if (!res.ok)
-        throw new Error(`ไม่สามารถโหลดโปรเจกต์ได้ (HTTP ${res.status})`);
-      const data = await res.json();
-
-      if (!Array.isArray(data))
-        throw new Error("ข้อมูลโปรเจกต์ที่ได้รับไม่ถูกต้อง");
-
+      const data = await apiRequest<any[]>({ op: 'getProjects', user: user });
+      
       const formattedProjects: Project[] = data.map((p: any) => ({
         ProjectID: p.projectId,
         Name: p.projectName,
         Priority: p.priority,
       }));
-
-      formattedProjects.sort((a, b) => {
-        return a.Priority - b.Priority;
-      });
-
+      formattedProjects.sort((a, b) => a.Priority - b.Priority);
       setProjects(formattedProjects);
 
-      // Auto-select logic
-      if (formattedProjects.length > 0) {
-        // ตรวจสอบว่า ID ที่เลือกไว้ปัจจุบันยังคงมีอยู่หรือไม่ ถ้าไม่มี ให้เลือกโปรเจกต์แรก
-        setSelectedProjectId((currentId) => {
-          if (
-            !currentId ||
-            !formattedProjects.find((p) => p.ProjectID === currentId)
-          ) {
-            return formattedProjects[0].ProjectID;
-          }
-          return currentId;
-        });
-      } else {
-        setSelectedProjectId(null);
-        setTasks([]);
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoadingMessage(null);
-    }
-  }, []);
+      // เลือกโปรเจกต์อัตโนมัติ
+      setSelectedProjectId((currentId) => {
+        if (!currentId || !formattedProjects.find((p) => p.ProjectID === currentId)) {
+          return formattedProjects.length > 0 ? formattedProjects[0].ProjectID : null;
+        }
+        return currentId;
+      });
 
-  const fetchTasks = useCallback(
+    } catch (err: any) {
+      setError(`โหลดโปรเจกต์ล้มเหลว: ${err.message}`);
+      console.error("fetchProjects Error:", err);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  }, [user]);
+
+  const fetchAllTasks = useCallback(async () => {
+    if (!user) return;
+    setIsLoadingAllTasks(true);
+    try {
+        const data = await apiRequest<any[]>({
+            op: 'getAllTasks',
+            user: user,
+            payload: { userRole: user.role }
+        });
+        
+        const formatted = formatAndSortTasks(data);
+        setAllTasks(formatted);
+        
+    } catch (error: any) {
+        console.error("Error fetching all tasks:", error);
+        // ไม่จำเป็นต้องตั้ง Error หลัก หากเป็นการโหลดพื้นหลัง
+    } finally {
+        setIsLoadingAllTasks(false);
+    }
+  }, [user, formatAndSortTasks]);
+
+  // ฟังก์ชันสำหรับดึง Task ของโปรเจกต์ที่ระบุเท่านั้น
+  const fetchTasksForProject = useCallback(
     async (projectId: string) => {
-      setLoadingMessage(`กำลังโหลด Task...`);
+      if (!user || projectId === "ALL") return;
+
+      setIsLoadingTasks(true);
       setError(null);
-      setTasks([]); // Clear existing tasks
 
       try {
-        const res = await fetch(
-          `${SCRIPT_URL}?op=getTasks&projectId=${projectId}`
-        );
-        if (!res.ok)
-          throw new Error(`ไม่สามารถโหลด Task ได้ (HTTP ${res.status})`);
-
-        const data = await res.json();
-        if (!Array.isArray(data))
-          throw new Error("ข้อมูล Task ที่ได้รับไม่ถูกต้อง");
+        const data = await apiRequest<any[]>({
+            op: 'getTasks',
+            user: user,
+            payload: { projectId: projectId, userRole: user.role }
+        });
 
         const formattedTasks = formatAndSortTasks(data);
         setTasks(formattedTasks);
       } catch (err: any) {
-        setError(err.message);
+        setError(`โหลด Task ล้มเหลว: ${err.message}`);
+        console.error("fetchTasks Error:", err);
+        setTasks([]); // ล้าง Task เมื่อเกิด Error
       } finally {
-        setLoadingMessage(null);
+        setIsLoadingTasks(false);
       }
     },
-    [formatAndSortTasks]
+    [user, formatAndSortTasks]
   );
 
   const fetchInitialTasks = useCallback(async () => {
+    if (!user) return;
     try {
-      const res = await fetch(`${SCRIPT_URL}?op=getInitialTasks`);
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        const formatted = data.map((t, i) => ({ ...t, _id: `init-${i}` }));
-        setInitialTasks(formatted);
-      }
+      const data = await apiRequest<any[]>({ op: 'getInitialTasks', user: user });
+      const formatted = formatAndSortTasks(data);
+      setInitialTasks(formatted);
     } catch (err) {
       console.error("Failed to fetch initial tasks:", err);
     }
-  }, []);
+  }, [user, formatAndSortTasks]);
 
-  const fetchAllTasks = useCallback(() => {
-    setLoadingMessage("กำลังรีเฟรชข้อมูล Task ทั้งหมด...");
-    fetch(`${SCRIPT_URL}?op=getAllTasks`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setAllTasks(data); // สมมติว่ามี state ชื่อ allTasks
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching all tasks:", error);
-        setError("ไม่สามารถโหลดข้อมูล Task ทั้งหมดได้");
-      })
-      .finally(() => {
-        setLoadingMessage(null);
-      });
-  }, []);
+  const refreshAllData = useCallback(async () => {
+    // โหลด Projects และ AllTasks พร้อมกัน
+    await Promise.all([fetchProjects(), fetchAllTasks()]);
+  }, [fetchProjects, fetchAllTasks]);
 
-  // --- Effects ---
+  // --- Effects (ปรับโครงสร้างใหม่และมีประสิทธิภาพ) ---
 
+  // Effect 1: โหลดข้อมูลเริ่มต้นเมื่อ User Login และล้างข้อมูลเมื่อ Logout
   useEffect(() => {
-    fetchProjects();
-    fetchInitialTasks();
-  }, []);
-
-  useEffect(() => {
-    if (selectedProjectId) {
-      fetchTasks(selectedProjectId);
+    if (user) {
+        refreshAllData();
+        fetchInitialTasks();
     } else {
-      setTasks([]);
+        setProjects([]);
+        setTasks([]);
+        setAllTasks([]);
+        setInitialTasks([]);
+        setSelectedProjectId(null);
     }
-  }, [selectedProjectId, fetchTasks]);
+  }, [user, refreshAllData, fetchInitialTasks]);
 
+
+  // Effect 2: จัดการการโหลด Task เมื่อโปรเจกต์ที่เลือกเปลี่ยนแปลง
+  // (แทนที่ useEffect ที่ซ้ำซ้อนในโค้ดเดิม)
   useEffect(() => {
-    if (!selectedProjectId || allTasks.length === 0) {
+    if (!user || !selectedProjectId) {
       setTasks([]);
       return;
     }
-    if (selectedProjectId === "ALL") {
-      setTasks(allTasks);
-      setLoadingMessage("");
-    } else {
-      setLoadingMessage("กำลังโหลด Task...");
 
-      const SCRIPT_URL = import.meta.env.VITE_APP_SCRIPT_URL;
-      fetch(`${SCRIPT_URL}?op=getTasks&projectId=${selectedProjectId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setTasks(data);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to fetch tasks for selected project:", err);
-          setError("ไม่สามารถโหลดข้อมูล Task ได้");
-        })
-        .finally(() => {
-          setLoadingMessage("");
-        });
+    if (selectedProjectId !== "ALL") {
+      // ถ้าเลือกโปรเจกต์เฉพาะ ให้เคลียร์ Task เดิมและเรียก fetch
+      setTasks([]); 
+      fetchTasksForProject(selectedProjectId);
     }
-  }, [selectedProjectId, allTasks]);
+    // เราไม่ใส่ allTasks ใน dependency ที่นี่ เพื่อป้องกันการโหลดซ้ำที่ไม่จำเป็น
+  }, [selectedProjectId, user, fetchTasksForProject]);
 
+  // Effect 3: อัปเดต tasks หาก allTasks เปลี่ยนแปลง (เช่น หลัง Edit) และกำลังเลือก "ALL" อยู่
   useEffect(() => {
-    fetchAllTasks();
-  }, [fetchAllTasks]);
+    if (selectedProjectId === "ALL") {
+        setTasks(allTasks);
+    }
+  }, [allTasks, selectedProjectId]);
+
 
   // --- Data Mutations & Actions ---
 
-  // Action สำหรับเลือกโปรเจกต์และเปลี่ยน Tab (ใช้ใน ProjectsTab)
+  // Helper สำหรับจัดการสถานะ Loading/Error สำหรับการ Create/Update/Delete
+  const handleApiAction = async (action: () => Promise<void>) => {
+    setIsOperating(true);
+    setError(null);
+    try {
+      await action();
+    } catch (err: any) {
+      setError(`การดำเนินการล้มเหลว: ${err.message}`);
+      console.error("API Action Error:", err);
+      throw err; // ส่งต่อ Error เพื่อให้ฟังก์ชันที่เรียกใช้ (เช่น saveTask) จัดการ Rollback ได้
+    } finally {
+      setIsOperating(false);
+    }
+  };
+
   const handleProjectSelect = useCallback(
     (projectId: string) => {
       setSelectedProjectId(projectId);
@@ -306,60 +357,74 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     [setActiveTab]
   );
 
+  // Save Task พร้อม Optimistic Update และ Rollback
   const saveTask = useCallback(
     async (updatedTask: Task) => {
-      setLoadingMessage("กำลังบันทึกการเปลี่ยนแปลง...");
-      try {
-        await fetch(SCRIPT_URL, {
-          method: "POST",
-          redirect: "follow",
-          body: JSON.stringify({ op: "updateTask", task: updatedTask }),
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-        });
+      if (!user) return;
 
-        // Optimistic UI update
-        setTasks((prevTasks) =>
-          prevTasks.map((t) => (t._id === updatedTask._id ? updatedTask : t))
-        );
-        closeModals(); // ปิด Modal เมื่อสำเร็จ (จาก UIContext)
-      } catch (err: any) {
-        setError(`เกิดข้อผิดพลาดในการบันทึก: ${err.message}`);
-      } finally {
-        setLoadingMessage(null);
+      // เก็บ State เก่าไว้เผื่อ Rollback
+      // ใช้ functional updates เพื่อเข้าถึง state ก่อนหน้าอย่างปลอดภัย
+      let previousTasks: Task[] = [];
+      let previousAllTasks: Task[] = [];
+
+      // 1. Optimistic UI update (อัปเดตหน้าจอทันที)
+      const updateState = (prevTasks: Task[]) =>
+          prevTasks.map((t) => (t._id === updatedTask._id ? updatedTask : t));
+          
+      setTasks(prev => {
+        previousTasks = prev;
+        return updateState(prev);
+      });
+      setAllTasks(prev => {
+        previousAllTasks = prev;
+        return updateState(prev);
+      });
+
+      // 2. ส่งข้อมูลไป Backend
+      try {
+        await handleApiAction(async () => {
+            await apiRequest({ 
+                op: "updateTask", 
+                user: user,
+                payload: { task: updatedTask } 
+            });
+            closeModals();
+        });
+      } catch (err) {
+        // 3. Rollback UI หาก Backend ทำงานล้มเหลว (Error ถูกตั้งค่าใน handleApiAction แล้ว)
+        setTasks(previousTasks);
+        setAllTasks(previousAllTasks);
       }
     },
-    [closeModals]
+    [user, closeModals]
   );
 
   const createProject = useCallback(
     async (projectName: string, priority: number, selectedTasks: Task[]) => {
-      setLoadingMessage("กำลังสร้างโปรเจกต์...");
+      if (!user) return;
       const newProjectId = `PROJ-${uuidv4().slice(0, 8).toUpperCase()}`;
-      try {
-        await fetch(SCRIPT_URL, {
-          method: "POST",
-          body: JSON.stringify({
+      
+      await handleApiAction(async () => {
+        await apiRequest({
             op: "createNewProject",
-            project: {
+            user: user,
+            // ตรวจสอบให้แน่ใจว่าโครงสร้างตรงกับ Backend ของคุณ
+            project: { 
               projectId: newProjectId,
               projectName: projectName,
               priority: priority,
               selectedTasks: selectedTasks,
-            },
-          }),
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
+            }
         });
-        await fetchProjects();
+
+        // Refetch ข้อมูลใหม่
+        await refreshAllData();
         setSelectedProjectId(newProjectId);
-        setActiveTab("dashboard"); // เปลี่ยน Tab (จาก UIContext)
-        closeModals(); // ปิด Modal (จาก UIContext)
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoadingMessage(null);
-      }
+        setActiveTab("dashboard");
+        closeModals();
+      });
     },
-    [fetchProjects, setActiveTab, closeModals]
+    [user, refreshAllData, setActiveTab, closeModals]
   );
 
   const updateProject = useCallback(
@@ -367,95 +432,96 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       projectId: string,
       updatedData: { Name: string; Priority: number }
     ) => {
-      setLoadingMessage("กำลังอัปเดตโปรเจกต์...");
-      try {
-        await fetch(SCRIPT_URL, {
-          method: "POST",
-          body: JSON.stringify({
+      if (!user) return;
+
+      await handleApiAction(async () => {
+        await apiRequest({
             op: "updateProject",
+            user: user,
             projectId: projectId,
             updatedData: {
               projectName: updatedData.Name,
               priority: updatedData.Priority,
-            },
-          }),
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
+            }
         });
 
         // Refetch เพื่อให้ข้อมูลและการเรียงลำดับถูกต้อง
         await fetchProjects();
         closeModals();
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoadingMessage(null);
-      }
+      });
     },
-    [fetchProjects, closeModals]
+    [user, fetchProjects, closeModals]
   );
 
   const createTask = useCallback(
     async (newTaskData: Omit<Task, "rowIndex" | "_id" | "Check">) => {
-      if (!selectedProjectId) return;
+      if (!user || !selectedProjectId || selectedProjectId === "ALL") return;
 
-      setLoadingMessage("กำลังสร้าง Task ใหม่...");
-      try {
-        await fetch(SCRIPT_URL, {
-          method: "POST",
-          body: JSON.stringify({
+      await handleApiAction(async () => {
+        await apiRequest({
             op: "createTask",
-            taskData: { ...newTaskData, ProjectID: selectedProjectId },
-          }),
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
+            user: user,
+            taskData: { ...newTaskData, ProjectID: selectedProjectId } 
         });
-        await fetchTasks(selectedProjectId);
-        closeModals(); // ปิด Modal (จาก UIContext)
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoadingMessage(null);
-      }
+        
+        // Refetch ข้อมูล Task ของโปรเจกต์นี้ และข้อมูล Task ทั้งหมด
+        await fetchTasksForProject(selectedProjectId);
+        await fetchAllTasks();
+        closeModals();
+      });
     },
-    [selectedProjectId, fetchTasks, closeModals]
+    [user, selectedProjectId, fetchTasksForProject, fetchAllTasks, closeModals]
   );
 
   const confirmDelete = useCallback(async () => {
-    if (!itemToDelete) return; // itemToDelete มาจาก UIContext
+    if (!user || !itemToDelete) return;
 
-    setLoadingMessage("กำลังลบข้อมูล...");
     const { type, data } = itemToDelete;
 
+    // เก็บ State เก่าไว้เผื่อ Rollback (สำหรับ Task)
+    let previousTasks: Task[] = [];
+    let previousAllTasks: Task[] = [];
+
     try {
-      const op = type === "task" ? "deleteTask" : "deleteProject";
-      const body =
-        type === "task"
-          ? { op, rowIndex: data.rowIndex }
-          : { op, projectId: data.ProjectID };
+        // Optimistic update for task deletion
+        if (type === "task") {
+            setTasks(prev => {
+                previousTasks = prev;
+                return prev.filter((t) => t._id !== data._id);
+            });
+            setAllTasks(prev => {
+                previousAllTasks = prev;
+                return prev.filter((t) => t._id !== data._id);
+            });
+        }
 
-      await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(body),
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-      });
+        await handleApiAction(async () => {
+            const op = type === "task" ? "deleteTask" : "deleteProject";
+            // ตรวจสอบให้แน่ใจว่าโครงสร้าง Body ตรงกับ Backend
+            const body =
+              type === "task"
+                ? { op, user, rowIndex: data.rowIndex }
+                : { op, user, projectId: data.ProjectID };
 
-      if (type === "task") {
-        // Optimistic update for task
-        setTasks((prev) => prev.filter((t) => t._id !== data._id));
-      } else {
-        // Refetch projects after deletion เพื่อความถูกต้องของข้อมูล
-        await fetchProjects();
-      }
-      closeModals(); // ปิด Modal (จาก UIContext)
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoadingMessage(null);
+            await apiRequest(body);
+
+            if (type !== "task") {
+              // Refetch หลังจากลบโปรเจกต์
+              await refreshAllData();
+            }
+            closeModals();
+        });
+    } catch (err) {
+        // Rollback UI หากลบไม่สำเร็จ
+        if (type === "task") {
+            setTasks(previousTasks);
+            setAllTasks(previousAllTasks);
+        }
     }
-  }, [itemToDelete, fetchProjects, closeModals]);
+  }, [user, itemToDelete, refreshAllData, closeModals]);
 
   // --- Derived/Calculated Data (Memoized) ---
 
-  // คำนวณ filteredTasks โดยใช้ filterTeam จาก UIContext
   const filteredTasks = useMemo(() => {
     if (filterTeam === "ALL") return tasks;
     return tasks.filter(
@@ -465,35 +531,36 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     );
   }, [tasks, filterTeam]);
 
+  // การคำนวณสถิติ (Dashboard)
   const {
     operationScore,
     efficiencyRatio,
     onTimePerformance,
     tasksByStatus,
     tasksByOwner,
-    incompleteCount,
-    overdueCount,
-    warningCount,
-    doneCount,
   } = useMemo(() => {
     const today = new Date();
-    const warningData = new Date();
-    warningData.setDate(today.getDate() + 10); // กำหนดช่วงเวลาเตือน 10 วัน
+    today.setHours(0, 0, 0, 0);
+    const warningDate = new Date();
+    warningDate.setDate(today.getDate() + 10); // กำหนดช่วงเวลาเตือน 10 วัน
+
+    // ใช้ allTasks สำหรับการคำนวณภาพรวม
     const incompleteTasks = allTasks.filter(
-      (t) => t.Status !== "Done" && t.Status !== "Cancelled"
+        (t) => t.Status !== "Done" && t.Status !== "Cancelled"
     );
-    const overdueTasks = incompleteTasks.filter(
-      (t) => t.Deadline && new Date(t.Deadline) < today
-    );
+
+    // *** แก้ไข Bug: โค้ดเดิมอ้างอิง tasks.Deadline ซึ่งผิด ต้องใช้ t.Deadline ***
+    /*
     const warningTasks = incompleteTasks.filter((t) => {
-      if (!tasks.Deadline) return false;
-      const deadlineDate = new Date(tasks.Deadline);
-      return deadlineDate >= today && deadlineDate <= warningData;
+      if (!t.Deadline) return false; 
+      const deadlineDate = new Date(t.Deadline);
+      return deadlineDate >= today && deadlineDate <= warningDate;
     });
+    */
 
     const completedTasks = allTasks.filter((t) => t.Status === "Done");
 
-    // คำนวณสถิติพื้นฐาน
+    // ใช้ 'tasks' (มุมมองปัจจุบัน) สำหรับสถิติเฉพาะหน้า (เช่น กราฟในหน้า TaskTab)
     const statusCounts: TasksByStatus = statusOptions.map((status) => ({
       name: status,
       Tasks: tasks.filter((t) => t.Status === status).length,
@@ -506,17 +573,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       }))
       .filter((o) => o.value > 0);
 
+    // จัดการกรณีที่ยังไม่มี Task ใดๆ เสร็จสิ้น
     if (completedTasks.length === 0) {
       return {
-        operationScore: "0.00",
-        efficiencyRatio: "0.0",
-        onTimePerformance: "0.0",
+        operationScore: "N/A",
+        efficiencyRatio: "N/A",
+        onTimePerformance: "N/A",
         tasksByStatus: statusCounts,
         tasksByOwner: ownerCounts,
       };
     }
 
-    // คำนวณคะแนน
+    // คำนวณคะแนน (ใช้ allTasks)
     const totalImpact = completedTasks.reduce(
       (sum, task) => sum + task["Impact Score"],
       0
@@ -531,6 +599,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       (sum, task) => sum + (task["Actual Hours"] || 0),
       0
     );
+    // ป้องกันการหารด้วยศูนย์
     const effRatio = totalActual > 0 ? (totalEst / totalActual) * 100 : 0;
 
     const onTimeCount = completedTasks.filter(
@@ -540,14 +609,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
     return {
       operationScore: opScore.toFixed(2),
-      efficiencyRatio: effRatio.toFixed(1),
-      onTimePerformance: onTimePerf.toFixed(1),
+      efficiencyRatio: effRatio.toFixed(1) + "%",
+      onTimePerformance: onTimePerf.toFixed(1) + "%",
       tasksByStatus: statusCounts,
       tasksByOwner: ownerCounts,
-      incompleteCount: incompleteTasks.length,
-      overdueCount: overdueTasks.length,
-      warningCount: warningTasks.length,
-      doneCount: completedTasks.length,
     };
   }, [tasks, allTasks]);
 
@@ -556,10 +621,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     tasks,
     initialTasks,
     selectedProjectId,
-    loadingMessage,
-    error,
-    fetchAllTasks,
+    allTasks,
 
+    // Status State
+    isLoadingProjects,
+    isLoadingTasks,
+    isLoadingAllTasks,
+    isOperating,
+    error,
+
+    // Derived Data
     filteredTasks,
     operationScore,
     efficiencyRatio,
@@ -567,6 +638,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     tasksByStatus,
     tasksByOwner,
 
+    // Actions
     setSelectedProjectId,
     handleProjectSelect,
     saveTask,
@@ -574,8 +646,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     updateProject,
     createTask,
     confirmDelete,
-    allTasks,
-    isLoadingAllTasks: loadingMessage === "กำลังโหลด Task...",
+    refreshAllData,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
