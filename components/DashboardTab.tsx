@@ -371,6 +371,7 @@ export const DashboardTab: React.FC = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action (Task)</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operation (Project)</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Note</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Help Assignee</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Help Details</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -384,6 +385,8 @@ export const DashboardTab: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{task.Owner || "-"}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-md" title={task.Task}>{task.Task}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm" title={getProjectName(task.ProjectID)}>{getProjectName(task.ProjectID)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm"title={task['Notes / Result']}>
+                  {truncateText(task['Notes / Result'], 10)}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-medium">{task.HelpAssignee || "-"}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs" title={task.HelpDetails}>
                   {truncateText(task.HelpDetails, 10)}
