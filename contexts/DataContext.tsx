@@ -409,7 +409,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             op: "createNewProject",
             user: user,
             // ตรวจสอบให้แน่ใจว่าโครงสร้างตรงกับ Backend ของคุณ
-            project: { 
+            payload: { 
               projectId: newProjectId,
               projectName: projectName,
               priority: priority,
