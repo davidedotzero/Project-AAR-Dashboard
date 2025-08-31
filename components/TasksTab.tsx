@@ -91,9 +91,9 @@ export const TasksTab: React.FC<TasksTabProps> = ({
 
   const { refreshAllData } = useData();
 
-  const handleRefresh = () => {
-    refreshAllData();
-  };
+  // const handleRefresh = () => {
+  //   refreshAllData();
+  // };
 
   const handleStatFilterClick = (filterType: string) => {
     setActiveStatFilter(prev => (prev === filterType ? null : filterType));
@@ -213,7 +213,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
       <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="flex justify-between items-center mb-3">
             <h3 className="text-md font-bold text-gray-700">สรุปสถานะ Task ของโปรเจกต์นี้</h3>
-            <button onClick={handleRefresh} className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-full transition-colors" aria-label="Refresh data">
+            <button onClick={refreshAllData} className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-full transition-colors" aria-label="Refresh data">
                 <RefreshIcon className="w-5 h-5" />
             </button>
         </div>

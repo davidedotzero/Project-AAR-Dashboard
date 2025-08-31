@@ -6,6 +6,7 @@ import { DataProvider } from "./contexts/DataContext";
 import { GlobalFilterProvider } from "./components/GlobalFilterContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "./contexts/AuthContext";
+import './style.css'
 
 
 const rootElement = document.getElementById("root");
