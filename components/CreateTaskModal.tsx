@@ -81,8 +81,8 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
                         <FormField label="Est. Hours"><input type="number" name="Est. Hours" value={formData['Est. Hours'] || ''} onChange={handleChange} className={baseInputClass} /></FormField>
                     </div>
                     <footer className="flex justify-end p-6 bg-gray-50 border-t rounded-b-xl">
-                        <button type="button" onClick={onClose} className="px-4 py-2 bg-white border rounded-md">ยกเลิก</button>
-                        <button type="submit" disabled={isLoading} className="ml-3 px-6 py-2 text-white bg-orange-500 rounded-md disabled:bg-gray-400">
+                        <button type="button" onClick={onClose} className="px-4 py-2 bg-white border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">ยกเลิก</button>
+                        <button type="submit" disabled={isLoading} className="ml-3 px-4 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                             {isLoading ? 'กำลังสร้าง...' : 'สร้าง Task'}
                         </button>
                     </footer>

@@ -11,6 +11,7 @@ import { EditIcon, ViewIcon, DeleteIcon } from "@/components/icons";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext"; // [✅ เพิ่ม]
 import { canEditTask } from "@/utils/authUtils"; // [✅ เพิ่ม]
+import { useUI } from "@/contexts/UIContext";
 
 // Helper function to truncate text (เหมือนเดิม)
 const truncateText = (text: string | null | undefined, wordLimit: number): string => {
@@ -80,7 +81,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   onEditTask,
   onTaskView,
   onDeleteTask,
-  onOpenCreateTask, // Get prop
+  onOpenCreateTask,
 }) => {
   const { user } = useAuth(); // [✅ เพิ่ม]
   const [ownerFilter, setOwnerFilter] = useState<string>("");
@@ -88,6 +89,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
   const { fetchTasks, selectedProjectId } = useData();
+  const { openCreateTaskModal } = useUI()
 
   const { refreshAllData } = useData();
 
@@ -230,13 +232,13 @@ export const TasksTab: React.FC<TasksTabProps> = ({
       <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-md font-bold text-gray-700">ตัวกรองและเครื่องมือ</h3>
-          {/* <button
-            onClick={() => onOpenCreateTask({})}
-            className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition duration-150 flex items-center space-x-2"
+          <button
+            onClick={openCreateTaskModal}
+            className="bg-orange-500 hover:bg-orange-600 text-white font-bold flex px-4 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
             <PlusIcon className="w-4 h-4" />
             <span>เพิ่ม Task</span>
-          </button> */}
+          </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
