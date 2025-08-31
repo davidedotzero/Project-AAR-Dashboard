@@ -22,10 +22,18 @@ const LogoutIcon = () => (
 
 export const ProfileTab: React.FC = () => {
   const { user, logout } = useAuth();
+  // [✅ อัปเดต] ดึงข้อมูล Metrics ใหม่จาก DataContext
   const {
-    operationScore,
-    efficiencyRatio,
-    onTimePerformance,
+    // operationScore, // ไม่ใช้แล้ว
+    // efficiencyRatio, // ไม่ใช้แล้ว
+    // onTimePerformance, // ไม่ใช้แล้ว
+    
+    // 👇 เพิ่มใหม่ 👇
+    totalCompletedTasks,
+    totalImpactDelivered,
+    workInProgressCount,
+    overdueTaskCount,
+
     globalTasksByStatus,
     globalTasksByOwner,
     isLoadingAllTasks,
@@ -86,9 +94,10 @@ export const ProfileTab: React.FC = () => {
           </div>
         ) : (
           <PerformanceDashboard
-            operationScore={operationScore}
-            efficiencyRatio={efficiencyRatio}
-            onTimePerformance={onTimePerformance}
+            totalCompletedTasks={totalCompletedTasks}
+            totalImpactDelivered={totalImpactDelivered}
+            workInProgressCount={workInProgressCount}
+            overdueTaskCount={overdueTaskCount}
             tasksByStatus={globalTasksByStatus}
             tasksByOwner={globalTasksByOwner}
           />

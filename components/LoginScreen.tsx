@@ -44,7 +44,7 @@ export const LoginScreen: React.FC = () => {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="p-8 bg-white rounded-xl shadow-lg text-center w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Project AAR Dashboard</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">มิวสิค อาร์ม</h1>
         <p className="text-gray-500 mb-8">Please sign in to continue</p>
         
         <button

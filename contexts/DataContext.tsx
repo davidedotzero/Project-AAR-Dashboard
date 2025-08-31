@@ -101,6 +101,10 @@ interface DataContextType {
   operationScore: string;
   efficiencyRatio: string;
   onTimePerformance: string;
+  totalCompletedTasks: number;
+  totalImpactDelivered: number;
+  workInProgressCount: number;
+  overdueTaskCount: number;
   tasksByStatus: TasksByStatus;
   tasksByOwner: TasksByOwner;
 
@@ -582,12 +586,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     tasksByOwner,
     globalTasksByStatus,
     globalTasksByOwner,
+    totalCompletedTasks,
+    totalImpactDelivered,
+    workInProgressCount,
+    overdueTaskCount,
   } = useMemo(() => {
-    /* (ส่วนที่คอมเมนต์ไว้ในต้นฉบับ)
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    ...
-    */
     // แยกการคำนวณ Global และ Scoped
 
     // 1. Global Counts (ใช้ allTasks)
@@ -618,7 +624,29 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       Tasks: tasks.filter((t) => t.Status === status).length,
     }));
 
+    // === 2. การคำนวณพื้นฐาน ===
     const completedTasks = allTasks.filter((t) => t.Status === "Done");
+    const incompleteTasks = allTasks.filter(t => t.Status !== "Done" && t.Status !== "Cancelled");
+
+    // === 3. คำนวณ Productivity Metrics ใหม่ (ใช้ allTasks) ===
+
+    // 3.1 Task Throughput
+    const completedCount = completedTasks.length;
+    // 3.2 Total Impact Delivered
+    const impactDelivered = completedTasks.reduce(
+      (sum, task) => sum + task["Impact Score"],
+      0
+    );
+    // 3.3 Work In Progress (WIP)
+    // กำหนดสถานะที่นับเป็น WIP (ปรับได้ตาม Workflow ของทีมคุณ)
+    // หมายเหตุ: "Not Started" มักจะถือเป็น Backlog ไม่ใช่ WIP
+    const wipStatuses = ["In Progress", "Doing", "Reviewing", "Help Me"]; 
+    // ตรวจสอบให้แน่ใจว่าสถานะเหล่านี้มีอยู่ในระบบจริง (statusOptions)
+    const relevantWipStatuses = wipStatuses.filter(status => statusOptions.includes(status));
+    const wipCount = allTasks.filter(t => relevantWipStatuses.includes(t.Status)).length;
+
+    // 3.4 Overdue Count
+    const overdueCount = incompleteTasks.filter(t => t.Deadline && new Date(t.Deadline) < today).length;
 
     const ownerCounts: TasksByOwner = ownerOptions
       .map((owner) => ({
@@ -626,6 +654,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         value: tasks.filter((t) => t.Owner === owner).length,
       }))
       .filter((o) => o.value > 0);
+
+    // === 4. การคำนวณ Metrics เดิม (OPS, EFF, OTP) ===
+
+    // จัดการกรณีที่ยังไม่มี Task ใดๆ เสร็จสิ้น
+    // if (completedCount === 0) {
+    //   return {
+    //     operationScore: "N/A",
+    //     efficiencyRatio: "N/A",
+    //     onTimePerformance: "N/A",
+    //     tasksByStatus: statusCounts,
+    //     tasksByOwner: ownerCounts,
+    //     globalTasksByStatus: globalStatusCounts,
+    //     globalTasksByOwner: globalOwnerCounts,
+    //     totalCompletedTasks: 0,
+    //     totalImpactDelivered: 0,
+    //     workInProgressCount: wipCount,
+    //     overdueTaskCount: overdueCount,
+    //   };
+    // }
 
     // จัดการกรณีที่ยังไม่มี Task ใดๆ เสร็จสิ้น
     if (completedTasks.length === 0) {
@@ -637,6 +684,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         tasksByOwner: ownerCounts,
         globalTasksByStatus: globalStatusCounts,
         globalTasksByOwner: globalOwnerCounts,
+        totalCompletedTasks: 0,
+        totalImpactDelivered: 0,
+        workInProgressCount: wipCount,
+        overdueTaskCount: overdueCount,
       };
     }
 
@@ -671,6 +722,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       tasksByOwner: ownerCounts,
       globalTasksByStatus: globalStatusCounts,
       globalTasksByOwner: globalOwnerCounts,
+      totalCompletedTasks: completedCount,
+      totalImpactDelivered: impactDelivered,
+      workInProgressCount: wipCount,
+      overdueTaskCount: overdueCount,
     };
   }, [tasks, allTasks]);
 
@@ -697,6 +752,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     tasksByOwner,
     globalTasksByStatus,
     globalTasksByOwner,
+    totalCompletedTasks,
+    totalImpactDelivered,
+    workInProgressCount,
+    overdueTaskCount,
 
     // Actions
     setSelectedProjectId,
