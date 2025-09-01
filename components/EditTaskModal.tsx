@@ -46,10 +46,29 @@ const calculateLeadTime = (deadline?: string, requestDate?: string): string => {
     return `${diffDays} วัน`;
 };
 
+const LinkIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+  </svg>
+);
+
 
 // --- Component ย่อยสำหรับแสดงผลในโหมด View เท่านั้น ---
 const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
   const helpLeadTime = calculateLeadTime(task.Deadline, task.HelpRequestedAt);
+  const attachmentLink = (task as any).AttachmentLink;
 
   return (
     <div className="p-8 space-y-6">
@@ -136,11 +155,22 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
             {task["Notes / Result"] || "-"}
           </p>
         </DetailItem>
-        {/* <DetailItem label="Feedback to Team">
-          <p className="p-2 bg-gray-50 rounded-md border min-h-[50px]">
-            {task["Feedback to Team"] || "-"}
-          </p>
-        </DetailItem> */}
+        <DetailItem label="Attachment Link (ลิงก์แนบ)">
+          {attachmentLink ? (
+            <a
+              href={attachmentLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              // [✅ ปรับปรุง] เพิ่ม Style ให้ดูน่าสนใจขึ้น
+              className="flex items-center text-blue-600 hover:text-blue-800 hover:underline break-all p-2 bg-blue-50 rounded-md border border-blue-200"
+            >
+              <LinkIcon className="mr-2 flex-shrink-0" />
+              <span>{attachmentLink}</span>
+            </a>
+          ) : (
+            <p className="p-2 bg-gray-50 rounded-md border">-</p>
+          )}
+        </DetailItem>
       </div>
     </div>
   );
@@ -189,6 +219,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
         ...task,
         Deadline: task.Deadline || "",
         HelpRequestedAt: task.HelpRequestedAt || "",
+        AttachmentLink: (task as any).AttachmentLink || "",
       };
       setFormData(formattedTask);
     }
@@ -207,7 +238,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
 
     setFormData((prev) => {
-        const updatedData = { ...prev, [name]: processedValue } as Task;
+        const updatedData = { ...prev, [name]: processedValue } as any;
         
         if (name === 'Status') {
             if (value === 'Help Me' && !updatedData.HelpRequestedAt) {
@@ -345,24 +376,31 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 )}
                 {/* +++ END: Conditional "Help Me" Section +++ */}
 
-                <FormField label="Notes / Result">
-                  <textarea
-                    name="Notes / Result"
-                    value={formData['Notes / Result'] ?? ""}
-                    onChange={handleChange} className={baseInputClass} />
-                </FormField>
+                <div className="md:col-span-2">
+                    <FormField label="Notes / Result">
+                    <textarea
+                        name="Notes / Result"
+                        value={formData['Notes / Result'] ?? ""}
+                        onChange={handleChange} 
+                        className={baseInputClass}
+                        rows={4} // เพิ่มพื้นที่
+                        />
+                    </FormField>
+                </div>
 
-
-
-                {/* <FormField label="Est. Hours">
-                  <input type="number" name="Est. Hours" value={formData["Est. Hours"] ?? ""} onChange={handleChange} className={baseInputClass} />
-                </FormField>
-
-                <FormField label="Actual Hours">
-                  <input type="number" name="Actual Hours" value={formData["Actual Hours"] ?? ""} onChange={handleChange} className={baseInputClass} />
-                </FormField> */}
-                
-                {/* ... Other form fields remain the same ... */}
+                <div className="md:col-span-2">
+                    <FormField label="Attachment Link (ลิงก์แนบ)">
+                    <input
+                        type="url"
+                        name="AttachmentLink"
+                        placeholder="https://example.com/link-to-resource"
+                        // [✅ แก้ไข] ใช้ (as any) ชั่วคราว ถ้า types.ts ยังไม่อัปเดต
+                        value={(formData as any).AttachmentLink ?? ""}
+                        onChange={handleChange}
+                        className={baseInputClass}
+                    />
+                    </FormField>
+                </div>
               </div>
 
               <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
@@ -390,7 +428,6 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
             </form>
           )}
         </div>
-        {/* ... Footer for view-only mode remains the same ... */}
       </div>
     </div>
   );

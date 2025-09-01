@@ -1,11 +1,12 @@
 // components/DashboardTab.tsx (New File)
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect} from "react";
 import { useGlobalFilters } from "@/components/GlobalFilterContext";
 import { useData } from "@/contexts/DataContext";
 import { useUI } from "@/contexts/UIContext";
 import { Project, Task } from "../types";
 import { useAuth } from "@/contexts/AuthContext"; // [✅ เพิ่ม]
 import { canEditTask } from "@/utils/authUtils"; // [✅ เพิ่ม]
+import { ViewIcon } from "./icons";
 
 // --- Helper Component: FilterDropdown ---
 const truncateText = (text: string, wordLimit: number): string => {
@@ -162,10 +163,15 @@ export const DashboardTab: React.FC = () => {
     isLoading,
     filteredTasks, // These are the tasks filtered by the global dropdowns
   } = useGlobalFilters();
-  const { projects, refreshAllData } = useData();
+  const { projects, refreshAllData, bulkUpdateTaskDeadlines } = useData();
   const { openViewModal, openEditModal } = useUI();
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  // [✅✅✅ เพิ่ม State สำหรับ Bulk Action]
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [newDeadline, setNewDeadline] = useState<string>("");
 
   const handleStatFilterClick = (filterType: string) => {
     setActiveStatFilter((prev) => (prev === filterType ? null : filterType));
@@ -302,6 +308,105 @@ export const DashboardTab: React.FC = () => {
 
     return sorted;
   }, [filteredTasks, activeStatFilter, sortOrder]);
+
+  // [✅✅✅ START: Bulk Action Logic (Adapted from TasksTab) ✅✅✅]
+
+  // 1. คำนวณ Task ที่สามารถแก้ไขได้ (ที่แสดงอยู่)
+  const editableTasksInView = useMemo(() => {
+    return finalSortedTasks.filter((task) => canEditTask(user, task));
+  }, [finalSortedTasks, user]);
+
+  // 2. Synchronize selection state when filters change
+  useEffect(() => {
+    // สร้าง Set ของ ID ที่แสดงอยู่ในปัจจุบัน
+    const visibleIds = new Set(finalSortedTasks.map((t) => t._id));
+
+    setSelectedTaskIds((prevSelectedIds) => {
+      // กรองเอาเฉพาะ ID ที่ยังแสดงอยู่ (ป้องกันการแก้ไข Task ที่ถูกซ่อน)
+      const newSelectedIds = new Set(
+        [...prevSelectedIds].filter((id) => visibleIds.has(id))
+      );
+
+      if (newSelectedIds.size === prevSelectedIds.size) {
+        // ถ้าไม่มีการเปลี่ยนแปลง ให้ return state เดิมเพื่อป้องกันการ re-render ที่ไม่จำเป็น
+        return prevSelectedIds;
+      }
+
+      // ถ้ามีการเปลี่ยนแปลง (เช่น Task ถูกกรองออก)
+      setNewDeadline(""); // เคลียร์ Deadline input
+      return newSelectedIds;
+    });
+  }, [finalSortedTasks]); // ขึ้นอยู่กับ finalSortedTasks
+
+  // 3. Handler สำหรับการเลือก/ไม่เลือก Task เดียว
+  const handleSelectOne = (taskId: string) => {
+    setSelectedTaskIds((prev) => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(taskId)) {
+        newSelection.delete(taskId);
+      } else {
+        newSelection.add(taskId);
+      }
+      return newSelection;
+    });
+  };
+
+  // 4. Handler สำหรับการเลือก/ไม่เลือกทั้งหมด (เฉพาะที่แก้ไขได้)
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      // เลือกทั้งหมดที่แก้ไขได้ในหน้านี้
+      setSelectedTaskIds(new Set(editableTasksInView.map((t) => t._id)));
+    } else {
+      // ยกเลิกการเลือกทั้งหมด
+      setSelectedTaskIds(new Set());
+    }
+  };
+
+  // 5. ตรวจสอบสถานะ Select All (All, Partial, None)
+  const isAllSelected =
+    editableTasksInView.length > 0 &&
+    selectedTaskIds.size === editableTasksInView.length;
+  const isPartialSelected =
+    selectedTaskIds.size > 0 &&
+    selectedTaskIds.size < editableTasksInView.length;
+
+  // 6. Handler สำหรับการทำ Bulk Update
+  const handleBulkUpdate = async () => {
+    if (selectedTaskIds.size === 0 || !newDeadline || isBulkUpdating) return;
+
+    // [✅ เพิ่มการตรวจสอบฟังก์ชัน]
+    if (!bulkUpdateTaskDeadlines) {
+        console.error("bulkUpdateTaskDeadlines function is not available in DataContext.");
+        alert("ฟังก์ชันการอัปเดตจำนวนมากยังไม่พร้อมใช้งาน (ตรวจสอบ DataContext)");
+        return;
+    }
+
+    // Confirmation
+    if (
+      !window.confirm(
+        `คุณแน่ใจหรือไม่ที่จะเปลี่ยน Deadline ของ ${
+          selectedTaskIds.size
+        } Task เป็น ${formatDateToDDMMYYYY(newDeadline)}?`
+      )
+    ) {
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    try {
+      await bulkUpdateTaskDeadlines(Array.from(selectedTaskIds), newDeadline);
+      // Clear selection on success
+      setSelectedTaskIds(new Set());
+      setNewDeadline("");
+      // DataContext should handle the refresh automatically
+    } catch (error) {
+      console.error("Error during bulk update:", error);
+      alert("เกิดข้อผิดพลาดในการอัปเดต Deadline");
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+  // [✅✅✅ END: Bulk Action Logic ✅✅✅]
 
   if (isLoading && finalSortedTasks.length === 0) {
     return (
@@ -476,11 +581,85 @@ export const DashboardTab: React.FC = () => {
         </div>
       </div>
 
+      {/* [✅✅✅ New Section: Bulk Action Bar (Copied from TasksTab) ✅✅✅] */}
+      {selectedTaskIds.size > 0 && (
+        <div className="p-4 bg-blue-50 rounded-lg shadow-sm border border-blue-300 flex flex-wrap items-center justify-between gap-4 transition-all duration-300 sticky top-0 z-10">
+          <div className="text-sm font-medium text-blue-800">
+            เลือกแล้ว {selectedTaskIds.size} รายการ
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <label
+              htmlFor="bulk-deadline-input-dashboard"
+              className="text-sm font-medium text-gray-700"
+            >
+              กำหนด Deadline ใหม่:
+            </label>
+            <input
+              id="bulk-deadline-input-dashboard"
+              type="date"
+              value={newDeadline}
+              onChange={(e) => setNewDeadline(e.target.value)}
+              className="px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+            />
+            <button
+              onClick={handleBulkUpdate}
+              disabled={!newDeadline || isBulkUpdating}
+              className={`px-4 py-2 text-sm font-semibold rounded-md text-white transition-colors duration-200 ${
+                !newDeadline || isBulkUpdating
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-orange-500 hover:bg-orange-600 shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+              }`}
+            >
+              {isBulkUpdating ? "กำลังอัปเดต..." : "ยืนยันการแก้ไข"}
+            </button>
+            <button
+              onClick={() => {
+                setSelectedTaskIds(new Set());
+                setNewDeadline("");
+              }}
+              className="text-sm text-gray-600 hover:text-gray-800 transition-colors px-3 py-2 hover:bg-gray-200 rounded-md"
+            >
+              ยกเลิกการเลือก
+            </button>
+          </div>
+        </div>
+      )}
+      {/* [✅✅✅ End Bulk Action Bar ✅✅✅] */}
+
       {/* ตารางแสดงผลลัพธ์ */}
       <div className="shadow overflow-x-auto border-b border-gray-200 sm:rounded-lg">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              {/* [✅ New Column: Checkbox Header] */}
+              <th scope="col" className="p-4 w-4">
+                <div className="flex items-center">
+                  <input
+                    id="checkbox-all-search-dashboard"
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={handleSelectAll}
+                    // จัดการ Indeterminate state โดยใช้ Callback Ref
+                    ref={(input) => {
+                      if (input) {
+                        input.indeterminate = isPartialSelected;
+                      }
+                    }}
+                    // Disable ถ้าไม่มี Task ที่แก้ไขได้เลย
+                    disabled={editableTasksInView.length === 0}
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 disabled:opacity-50 cursor-pointer"
+                    title={
+                      editableTasksInView.length === 0
+                        ? "ไม่มี Task ที่คุณแก้ไขได้ในมุมมองนี้"
+                        : "เลือกทั้งหมด (ที่แก้ไขได้)"
+                    }
+                  />
+                  <label htmlFor="checkbox-all-search-dashboard" className="sr-only">
+                    เลือกทั้งหมด
+                  </label>
+                </div>
+              </th>
+              {/* [✅ End Checkbox Header] */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <button
                   onClick={handleSortByDeadline}
@@ -517,6 +696,7 @@ export const DashboardTab: React.FC = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {finalSortedTasks.map((task) => {
               const userCanEdit = canEditTask(user, task);
+              const isSelected = selectedTaskIds.has(task._id);
 
               // [✅✅✅ New Logic] การตรวจสอบเพื่อเน้นสี Owner/Assignee
               const activeOwnerFilter = selections.owner;
@@ -537,6 +717,33 @@ export const DashboardTab: React.FC = () => {
 
               return (
                 <tr key={task._id} className="hover:bg-gray-50">
+                  <td className="w-4 p-4">
+                    {userCanEdit ? (
+                      <div className="flex items-center">
+                        <input
+                          id={`checkbox-table-dashboard-${task._id}`}
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectOne(task._id)}
+                          className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 cursor-pointer"
+                        />
+                        <label
+                          htmlFor={`checkbox-table-dashboard-${task._id}`}
+                          className="sr-only"
+                        >
+                          checkbox
+                        </label>
+                      </div>
+                    ) : (
+                      // แสดงช่องว่างถ้าแก้ไขไม่ได้
+                      <div
+                        className="w-4 h-4"
+                        title="คุณไม่มีสิทธิ์แก้ไข Task นี้"
+                      ></div>
+                    )}
+                  </td>
+                  {/* [✅ End Checkbox Cell] */}
+
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDateToDDMMYYYY(task.Deadline)}
                   </td>
