@@ -22,28 +22,30 @@ const DetailItem: React.FC<{ label: string; children: React.ReactNode }> = ({
 );
 
 // --- Helper function to calculate day difference ---
-const formatDateToDDMMYYYY = (dateString: string | null | undefined): string => {
-    if (!dateString) return "N/A";
-    // Input format คือ YYYY-MM-DD
-    const parts = dateString.split("-");
-    if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-    return "N/A";
+const formatDateToDDMMYYYY = (
+  dateString: string | null | undefined
+): string => {
+  if (!dateString) return "N/A";
+  // Input format คือ YYYY-MM-DD
+  const parts = dateString.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return "N/A";
 };
 
 const calculateLeadTime = (deadline?: string, requestDate?: string): string => {
-    if (!deadline || !requestDate) {
-        return "N/A";
-    }
-    const deadlineD = new Date(deadline);
-    const requestD = new Date(requestDate);
-    if (isNaN(deadlineD.getTime()) || isNaN(requestD.getTime())) {
-        return "N/A";
-    }
-    const diffTime = deadlineD.getTime() - requestD.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return `${diffDays} วัน`;
+  if (!deadline || !requestDate) {
+    return "N/A";
+  }
+  const deadlineD = new Date(deadline);
+  const requestD = new Date(requestDate);
+  if (isNaN(deadlineD.getTime()) || isNaN(requestD.getTime())) {
+    return "N/A";
+  }
+  const diffTime = deadlineD.getTime() - requestD.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return `${diffDays} วัน`;
 };
 
 const LinkIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -64,11 +66,10 @@ const LinkIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-
 // --- Component ย่อยสำหรับแสดงผลในโหมด View เท่านั้น ---
 const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
   const helpLeadTime = calculateLeadTime(task.Deadline, task.HelpRequestedAt);
-  const attachmentLink = (task as any).AttachmentLink;
+  const attachmentLink = task.AttachmentLink;
 
   return (
     <div className="p-8 space-y-6">
@@ -120,31 +121,33 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
       </div>
 
       {/* --- Help Me Section (Conditional) --- */}
-      {task.Status === 'Help Me' && (
+      {task.Status === "Help Me" && (
         <div className="p-4 bg-purple-50 border-l-4 border-purple-400 rounded-r-lg">
-            <h4 className="text-md font-bold text-purple-800 mb-4">รายละเอียดการร้องขอความช่วยเหลือ</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
-                <DetailItem label="วันที่ร้องขอ">
-                    <p className="font-semibold">
-                        {formatDateToDDMMYYYY(task.HelpRequestedAt) || "-"}
-                    </p>
-                </DetailItem>
-                <DetailItem label="ขอความช่วยเหลือจาก">
-                    <span className="px-2.5 py-1 text-sm font-semibold text-purple-800 bg-purple-200 rounded-full">
-                        {task.HelpAssignee || "-"}
-                    </span>
-                </DetailItem>
-                <DetailItem label="ขอความช่วยเหลือล่วงหน้า">
-                    <p className="font-bold text-purple-800">{helpLeadTime}</p>
-                </DetailItem>
-                <div className="md:col-span-3">
-                    <DetailItem label="รายละเอียด">
-                        <p className="p-2 bg-purple-100 rounded-md border border-purple-200 min-h-[50px]">
-                            {task.HelpDetails || "-"}
-                        </p>
-                    </DetailItem>
-                </div>
+          <h4 className="text-md font-bold text-purple-800 mb-4">
+            รายละเอียดการร้องขอความช่วยเหลือ
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
+            <DetailItem label="วันที่ร้องขอ">
+              <p className="font-semibold">
+                {formatDateToDDMMYYYY(task.HelpRequestedAt) || "-"}
+              </p>
+            </DetailItem>
+            <DetailItem label="ขอความช่วยเหลือจาก">
+              <span className="px-2.5 py-1 text-sm font-semibold text-purple-800 bg-purple-200 rounded-full">
+                {task.HelpAssignee || "-"}
+              </span>
+            </DetailItem>
+            <DetailItem label="ขอความช่วยเหลือล่วงหน้า">
+              <p className="font-bold text-purple-800">{helpLeadTime}</p>
+            </DetailItem>
+            <div className="md:col-span-3">
+              <DetailItem label="รายละเอียด">
+                <p className="p-2 bg-purple-100 rounded-md border border-purple-200 min-h-[50px]">
+                  {task.HelpDetails || "-"}
+                </p>
+              </DetailItem>
             </div>
+          </div>
         </div>
       )}
 
@@ -219,7 +222,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
         ...task,
         Deadline: task.Deadline || "",
         HelpRequestedAt: task.HelpRequestedAt || "",
-        AttachmentLink: (task as any).AttachmentLink || "",
+        AttachmentLink: task.AttachmentLink || "",
       };
       setFormData(formattedTask);
     }
@@ -238,34 +241,35 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
 
     setFormData((prev) => {
-        const updatedData = { ...prev, [name]: processedValue } as any;
-        
-        if (name === 'Status') {
-            if (value === 'Help Me' && !updatedData.HelpRequestedAt) {
-                const today = new Date();
-                const formattedToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                updatedData.HelpRequestedAt = formattedToday;
-            } else if (value !== 'Help Me') {
-                // If status is changed away from "Help Me", clear all related fields
-                updatedData.HelpRequestedAt = '';
-                updatedData.HelpAssignee = '';
-                updatedData.HelpDetails = '';
-            }
-        }
+      const updatedData = { ...prev, [name]: processedValue } as any;
 
-        return updatedData;
+      if (name === "Status") {
+        if (value === "Help Me" && !updatedData.HelpRequestedAt) {
+          const today = new Date();
+          const formattedToday = `${today.getFullYear()}-${String(
+            today.getMonth() + 1
+          ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+          updatedData.HelpRequestedAt = formattedToday;
+        } else if (value !== "Help Me") {
+          // If status is changed away from "Help Me", clear all related fields
+          updatedData.HelpRequestedAt = "";
+          updatedData.HelpAssignee = "";
+          updatedData.HelpDetails = "";
+        }
+      }
+
+      return updatedData;
     });
   };
 
- const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return; // ป้องกันการ Submit ซ้ำ
 
     if (formData) {
-        onSave(formData);
+      onSave(formData);
     }
   };
-  
 
   const helpLeadTime = useMemo(() => {
     return calculateLeadTime(formData?.Deadline, formData?.HelpRequestedAt);
@@ -293,10 +297,16 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
       >
         {/* Header */}
         <header className="flex justify-between items-center p-6 border-b sticky top-0 bg-white z-10">
-            <h2 className="text-xl font-bold text-gray-800">
-                {isViewOnly ? 'รายละเอียด Task' : 'แก้ไข Task'}
-            </h2>
-            <button onClick={handleClose} disabled={isLoading} className="text-gray-400 hover:text-gray-600 disabled:opacity-30">&times;</button>
+          <h2 className="text-xl font-bold text-gray-800">
+            {isViewOnly ? "รายละเอียด Task" : "แก้ไข Task"}
+          </h2>
+          <button
+            onClick={handleClose}
+            disabled={isLoading}
+            className="text-gray-400 hover:text-gray-600 disabled:opacity-30"
+          >
+            &times;
+          </button>
         </header>
         {/* ... Header remains the same ... */}
         <div className="overflow-y-auto">
@@ -305,125 +315,187 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
           ) : (
             <form onSubmit={handleSubmit} className="overflow-y-auto">
               <fieldset disabled={isLoading}>
-              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                <div className="md:col-span-2">
-                  <FormField label="Task">
-                    <input type="text" name="Task" value={formData.Task} onChange={handleChange} className={baseInputClass} required />
-                  </FormField>
-                </div>
-
-                <FormField label="Owner">
-                  <select name="Owner" value={formData.Owner} onChange={handleChange} className={baseInputClass}>
-                    {ownerOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
-                  </select>
-                </FormField>
-
-                <FormField label="Deadline">
-                  <input type="date" name="Deadline" value={formData.Deadline || ''} onChange={handleChange} className={baseInputClass} />
-                </FormField>
-
-                <FormField label="Status">
-                  <select name="Status" value={formData.Status} onChange={handleChange} className={baseInputClass}>
-                    {statusOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
-                  </select>
-                </FormField>
-
-                {/* Spacer to align fields correctly when Help Me is not selected */}
-                {formData.Status !== 'Help Me' && <div className="hidden md:block"></div>}
-
-
-                {/* +++ START: Conditional "Help Me" Section +++ */}
-                {formData.Status === 'Help Me' && (
-                    <>
-                        <div className="md:col-span-2 p-4 bg-purple-50 border-l-4 border-purple-400 rounded-r-lg">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
-                                <FormField label="วันที่ร้องขอความช่วยเหลือ">
-                                    <input
-                                        type="date"
-                                        name="HelpRequestedAt"
-                                        value={formData.HelpRequestedAt || ''}
-                                        onChange={handleChange}
-                                        className={`${baseInputClass} bg-gray-200`}
-                                        readOnly // Make it read-only
-                                    />
-                                </FormField>
-                                <FormField label="ขอความช่วยเหลือล่วงหน้า">
-                                    <div className="mt-1 px-3 py-2 bg-gray-200 rounded-md text-sm font-bold text-purple-800 h-full flex items-center">
-                                        {helpLeadTime}
-                                    </div>
-                                </FormField>
-                                <FormField label="ผู้ช่วยเหลือ (Help Assignee)">
-                                    <select name="HelpAssignee" value={formData.HelpAssignee || ''} onChange={handleChange} className={`${baseInputClass} border-purple-300`}>
-                                        <option value="">-- เลือกทีม --</option>
-                                        {ownerOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
-                                    </select>
-                                </FormField>
-                                <div className="md:col-span-3">
-                                    <FormField label="รายละเอียดการร้องขอ">
-                                        <textarea
-                                            name="HelpDetails"
-                                            value={formData.HelpDetails || ''}
-                                            onChange={handleChange}
-                                            className={`${baseInputClass} border-purple-300`}
-                                            rows={3}
-                                            placeholder="อธิบายปัญหาที่ต้องการความช่วยเหลือ..."
-                                        ></textarea>
-                                    </FormField>
-                                </div>
-                            </div>
-                        </div>
-                    </>
-                )}
-                {/* +++ END: Conditional "Help Me" Section +++ */}
-
-                <div className="md:col-span-2">
-                    <FormField label="Notes / Result">
-                    <textarea
-                        name="Notes / Result"
-                        value={formData['Notes / Result'] ?? ""}
-                        onChange={handleChange} 
-                        className={baseInputClass}
-                        rows={4} // เพิ่มพื้นที่
-                        />
-                    </FormField>
-                </div>
-
-                <div className="md:col-span-2">
-                    <FormField label="Attachment Link (ลิงก์แนบ)">
-                    <input
-                        type="url"
-                        name="AttachmentLink"
-                        placeholder="https://example.com/link-to-resource"
-                        // [✅ แก้ไข] ใช้ (as any) ชั่วคราว ถ้า types.ts ยังไม่อัปเดต
-                        value={(formData as any).AttachmentLink ?? ""}
+                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                  <div className="md:col-span-2">
+                    <FormField label="Task">
+                      <input
+                        type="text"
+                        name="Task"
+                        value={formData.Task}
                         onChange={handleChange}
                         className={baseInputClass}
-                    />
+                        required
+                      />
                     </FormField>
-                </div>
-              </div>
+                  </div>
 
-              <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-                <button type="button" onClick={handleClose} disabled={isLoading} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50">
-                  ยกเลิก
-                </button>
-                <button
+                  <FormField label="Owner">
+                    <select
+                      name="Owner"
+                      value={formData.Owner}
+                      onChange={handleChange}
+                      className={baseInputClass}
+                    >
+                      {ownerOptions.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+
+                  <FormField label="Deadline">
+                    <input
+                      type="date"
+                      name="Deadline"
+                      value={formData.Deadline || ""}
+                      onChange={handleChange}
+                      className={baseInputClass}
+                    />
+                  </FormField>
+
+                  <FormField label="Status">
+                    <select
+                      name="Status"
+                      value={formData.Status}
+                      onChange={handleChange}
+                      className={baseInputClass}
+                    >
+                      {statusOptions.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+
+                  {/* Spacer to align fields correctly when Help Me is not selected */}
+                  {formData.Status !== "Help Me" && (
+                    <div className="hidden md:block"></div>
+                  )}
+
+                  {/* +++ START: Conditional "Help Me" Section +++ */}
+                  {formData.Status === "Help Me" && (
+                    <>
+                      <div className="md:col-span-2 p-4 bg-purple-50 border-l-4 border-purple-400 rounded-r-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
+                          <FormField label="วันที่ร้องขอความช่วยเหลือ">
+                            <input
+                              type="date"
+                              name="HelpRequestedAt"
+                              value={formData.HelpRequestedAt || ""}
+                              onChange={handleChange}
+                              className={`${baseInputClass} bg-gray-200`}
+                              readOnly // Make it read-only
+                            />
+                          </FormField>
+                          <FormField label="ขอความช่วยเหลือล่วงหน้า">
+                            <div className="mt-1 px-3 py-2 bg-gray-200 rounded-md text-sm font-bold text-purple-800 h-full flex items-center">
+                              {helpLeadTime}
+                            </div>
+                          </FormField>
+                          <FormField label="ผู้ช่วยเหลือ (Help Assignee)">
+                            <select
+                              name="HelpAssignee"
+                              value={formData.HelpAssignee || ""}
+                              onChange={handleChange}
+                              className={`${baseInputClass} border-purple-300`}
+                            >
+                              <option value="">-- เลือกทีม --</option>
+                              {ownerOptions.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </FormField>
+                          <div className="md:col-span-3">
+                            <FormField label="รายละเอียดการร้องขอ">
+                              <textarea
+                                name="HelpDetails"
+                                value={formData.HelpDetails || ""}
+                                onChange={handleChange}
+                                className={`${baseInputClass} border-purple-300`}
+                                rows={3}
+                                placeholder="อธิบายปัญหาที่ต้องการความช่วยเหลือ..."
+                              ></textarea>
+                            </FormField>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {/* +++ END: Conditional "Help Me" Section +++ */}
+
+                  <div className="md:col-span-2">
+                    <FormField label="Notes / Result">
+                      <textarea
+                        name="Notes / Result"
+                        value={formData["Notes / Result"] ?? ""}
+                        onChange={handleChange}
+                        className={baseInputClass}
+                        rows={4} // เพิ่มพื้นที่
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <FormField label="Attachment Link (ลิงก์แนบ)">
+                      <input
+                        type="url"
+                        name="AttachmentLink"
+                        value={formData.AttachmentLink ?? ""} 
+                        onChange={handleChange}
+                        className={baseInputClass}
+                      />
+                    </FormField>
+                  </div>
+                </div>
+
+                <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    disabled={isLoading}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
                     type="submit"
                     disabled={isLoading}
                     className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                   {isLoading ? (
-                        <span className="flex items-center">
-                             {/* Loading Spinner SVG */}
-                             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            กำลังบันทึก...
-                        </span>
-                    ) : 'บันทึก'}
-                </button>
-              </div>
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center">
+                        {/* Loading Spinner SVG */}
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        กำลังบันทึก...
+                      </span>
+                    ) : (
+                      "บันทึก"
+                    )}
+                  </button>
+                </div>
               </fieldset>
             </form>
           )}

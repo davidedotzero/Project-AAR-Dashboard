@@ -45,6 +45,7 @@ export interface Task {
   "Owner Feedback": string | null;
   "Project Feedback": string | null;
   MilestoneID: string | null;
+  AttachmentLink?: string | null;
 
   // [✅ เพิ่มใหม่] ฟิลด์เสริมที่ใช้ใน DashboardTab/TasksTab
   HelpAssignee?: string | null;
