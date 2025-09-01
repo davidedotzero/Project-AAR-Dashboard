@@ -70,6 +70,7 @@ const AppContent = () => {
     createTask,
     confirmDelete,
     bulkUpdateDeadline,
+    isOperating,
   } = useData();
   
   const { user } = useAuth();
@@ -128,7 +129,7 @@ const AppContent = () => {
         onClose={closeModals}
         onCreate={createProject}
         initialTasks={initialTasks}
-        isLoading={!!loadingMessage}
+        isLoading={isOperating}
       />
       {isEditProjectModalOpen && currentEditingProject && (
         <EditProjectModal
@@ -145,11 +146,12 @@ const AppContent = () => {
         onClose={closeModals}
         onCreate={createTask}
         initialData={newTaskDefaults}
-        isLoading={!!loadingMessage}
+        isLoading={isOperating}
       />
       {(isEditModalOpen || isViewModalOpen) && currentTask && (
         <EditTaskModal
           isOpen={isEditModalOpen || isViewModalOpen}
+          isLoading={isOperating}
           onClose={closeModals}
           onSave={saveTask}
           task={currentTask}
@@ -163,6 +165,7 @@ const AppContent = () => {
       )}
       <ConfirmDeleteModal
         isOpen={isDeleteModalOpen}
+        isLoading={isOperating}
         onClose={closeModals}
         onConfirm={confirmDelete}
         title={`ยืนยันการลบ ${
@@ -173,7 +176,6 @@ const AppContent = () => {
             ? `คุณแน่ใจหรือไม่ว่าต้องการลบโปรเจกต์ "${itemToDelete?.data.Name}"? การกระทำนี้จะลบ Task ทั้งหมดที่เกี่ยวข้องและไม่สามารถย้อนกลับได้`
             : `คุณแน่ใจหรือไม่ว่าต้องการลบ Task "${itemToDelete?.data.Task}"?`
         }
-        isLoading={!!loadingMessage}
       />
     </div>
   );
