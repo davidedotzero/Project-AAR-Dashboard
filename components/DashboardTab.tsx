@@ -93,6 +93,35 @@ const SortIcon: React.FC<{ direction: 'asc' | 'desc' }> = ({ direction }) => (
   </svg>
 );
 
+const formatDateToDDMMYYYY = (
+    dateString: string | null | undefined
+  ): string => {
+    if (!dateString) return "N/A";
+    // เนื่องจาก Format คือ YYYY-MM-DD
+    const parts = dateString.split("-");
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
+    }
+    return "N/A";
+  };
+
+  const getTodayDDMMYYYY = () => {
+    const date = new Date();
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const getWarningDateDDMMYYYY = (daysAhead: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + daysAhead);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${day}-${month}-${year}`;
+  };
+
 
 // --- Main Component: DashboardTab ---
 export const DashboardTab: React.FC = () => {
@@ -129,19 +158,17 @@ export const DashboardTab: React.FC = () => {
 
   // --- KPIs Calculation (based on globally filtered tasks) ---
   const { statusMetrics, avgHelpLeadTime } = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
-
-    const warningDate = new Date(today);
-    warningDate.setDate(today.getDate() + 10);
+    const today = getTodayDDMMYYYY();
+    const warningDate = getWarningDateDDMMYYYY(10);
 
     const incompleteTasks = filteredTasks.filter(t => t.Status !== 'Done' && t.Status !== 'Cancelled');
-    const overdueCount = incompleteTasks.filter(t => t.Deadline && new Date(t.Deadline) < today).length;
+    const overdueCount = incompleteTasks.filter(t => t.Deadline && t.Deadline < today).length;
     const warningCount = incompleteTasks.filter(t => {
       if (!t.Deadline) return false;
       const deadlineDate = new Date(t.Deadline);
-      return deadlineDate >= today && deadlineDate <= warningDate;
+      return t.Deadline >= today && t.Deadline <= warningDate;
     }).length;
+    
     const doneCount = filteredTasks.filter(t => t.Status === 'Done').length;
     const helpMeCount = filteredTasks.filter(t => t.Status === 'Help Me').length;
 
@@ -185,23 +212,10 @@ export const DashboardTab: React.FC = () => {
     return project ? project.Name : projectId;
   };
 
-  const formatDateToDDMMYYYY = (dateString: string | null | undefined): string => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "N/A";
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
-
   // Final filtering and sorting
   const finalSortedTasks = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const warningDate = new Date(today);
-    warningDate.setDate(today.getDate() + 10);
+    const today = getTodayDDMMYYYY();
+    const warningDate = getWarningDateDDMMYYYY(10);
 
     let tasksToProcess = filteredTasks;
 
@@ -210,13 +224,12 @@ export const DashboardTab: React.FC = () => {
       const incomplete = tasksToProcess.filter(t => t.Status !== 'Done' && t.Status !== 'Cancelled');
       switch (activeStatFilter) {
         case 'Overdue':
-          tasksToProcess = incomplete.filter(t => t.Deadline && new Date(t.Deadline) < today);
+          tasksToProcess = incomplete.filter(t => t.Deadline && t.Deadline < today);
           break;
         case 'Warning':
           tasksToProcess = incomplete.filter(t => {
             if (!t.Deadline) return false;
-            const deadlineDate = new Date(t.Deadline);
-            return deadlineDate >= today && deadlineDate <= warningDate;
+            return t.Deadline >= today && t.Deadline <= warningDate;
           });
           break;
         case 'Incomplete':
@@ -236,14 +249,17 @@ export const DashboardTab: React.FC = () => {
       const aHasDeadline = a.Deadline != null && a.Deadline !== '';
       const bHasDeadline = b.Deadline != null && b.Deadline !== '';
 
-      if (aHasDeadline && !bHasDeadline) return -1;
-      if (!aHasDeadline && bHasDeadline) return 1;
+      if (aHasDeadline && !bHasDeadline) return sortOrder === 'asc' ? -1 : 1;
+      if (!aHasDeadline && bHasDeadline) return sortOrder === 'asc' ? 1 : -1;
       if (!aHasDeadline && !bHasDeadline) return 0;
 
-      const aDeadline = new Date(a.Deadline!).getTime();
-      const bDeadline = new Date(b.Deadline!).getTime();
-
-      return sortOrder === 'asc' ? aDeadline - bDeadline : bDeadline - aDeadline;
+      if (a.Deadline! < b.Deadline!) {
+        return sortOrder === 'asc' ? -1 : 1;
+      }
+      if (a.Deadline! > b.Deadline!) {
+        return sortOrder === 'asc' ? 1 : -1;
+      }
+      return 0;
     });
 
     return sorted;

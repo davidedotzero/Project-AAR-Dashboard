@@ -97,7 +97,7 @@ interface DataContextType {
   error: string | null;
 
   // Derived Data
-  filteredTasks: Task[];
+  // filteredTasks: Task[]; -- remove
   operationScore: string;
   efficiencyRatio: string;
   onTimePerformance: string;
@@ -141,7 +141,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const { user } = useAuth();
-  const { filterTeam, itemToDelete, closeModals, setActiveTab } = useUI();
+  const { itemToDelete, closeModals, setActiveTab } = useUI();
 
   // Data States
   const [projects, setProjects] = useState<Project[]>([]);
@@ -183,6 +183,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         if (phaseAIndex === phaseBIndex) return 0;
         return phaseAIndex < phaseBIndex ? -1 : 1;
       });
+      const formatToLocalISODate = (gasDate: any): string => {
+        if (!gasDate) return "";
+        const date = new Date(gasDate); // Browser ตีความตาม Local Time
+        if (isNaN(date.getTime())) return "";
+
+        // ดึงค่าตาม Local Time และจัดรูปแบบ
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
 
       return sortedData.map((t: any) => ({
         // สร้าง _id ที่เสถียร
@@ -199,9 +211,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         Phase: t.Phase,
         Task: t.Task,
         Owner: t.Owner,
-        Deadline: t.Deadline
-          ? new Date(t.Deadline).toISOString().split("T")[0]
-          : "",
+        Deadline: formatToLocalISODate(t.Deadline),
         Status: t.Status,
         "Est. Hours": Number(t["Est. Hours"]) || 0,
         "Actual Hours": t["Actual Hours"] ? Number(t["Actual Hours"]) : null,
@@ -637,14 +647,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   // --- Derived/Calculated Data (Memoized) ---
   // (ส่วนการคำนวณสถิติไม่มีการเปลี่ยนแปลง)
 
-  const filteredTasks = useMemo(() => {
-    if (filterTeam === "ALL") return tasks;
-    return tasks.filter(
-      (task) =>
-        task["Feedback to Team"] &&
-        task["Feedback to Team"].includes(`@${filterTeam}`)
-    );
-  }, [tasks, filterTeam]);
+  // const filteredTasks = useMemo(() => {
+  //   if (filterTeam === "ALL") return tasks;
+  //   return tasks.filter(
+  //     (task) =>
+  //       task["Feedback to Team"] &&
+  //       task["Feedback to Team"].includes(`@${filterTeam}`)
+  //   );
+  // }, [tasks, filterTeam]);
 
   // การคำนวณสถิติ (Dashboard)
   const {
@@ -661,8 +671,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     overdueTaskCount,
   } = useMemo(() => {
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const getTodayDDMMYYYY = () => {
+      const date = new Date();
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    };
+
+    const today = getTodayDDMMYYYY();
     // แยกการคำนวณ Global และ Scoped
 
     // 1. Global Counts (ใช้ allTasks)
@@ -693,9 +710,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       Tasks: tasks.filter((t) => t.Status === status).length,
     }));
 
+    const ownerCounts: TasksByOwner = ownerOptions
+      .map((owner) => ({
+        name: owner,
+        value: tasks.filter((t) => t.Owner === owner).length,
+      }))
+      .filter((o) => o.value > 0);
+
     // === 2. การคำนวณพื้นฐาน ===
-    const completedTasks = allTasks.filter((t) => t.Status === "Done");
-    const incompleteTasks = allTasks.filter(t => t.Status !== "Done" && t.Status !== "Cancelled");
+    const completedTasks = tasks.filter((t) => t.Status === "Done");
+    const incompleteTasks = tasks.filter(t => t.Status !== "Done" && t.Status !== "Cancelled");
 
     // === 3. คำนวณ Productivity Metrics ใหม่ (ใช้ allTasks) ===
 
@@ -712,17 +736,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     const wipStatuses = ["In Progress", "Doing", "Reviewing", "Help Me"]; 
     // ตรวจสอบให้แน่ใจว่าสถานะเหล่านี้มีอยู่ในระบบจริง (statusOptions)
     const relevantWipStatuses = wipStatuses.filter(status => statusOptions.includes(status));
-    const wipCount = allTasks.filter(t => relevantWipStatuses.includes(t.Status)).length;
+    const wipCount = tasks.filter(t => relevantWipStatuses.includes(t.Status)).length;
 
     // 3.4 Overdue Count
-    const overdueCount = incompleteTasks.filter(t => t.Deadline && new Date(t.Deadline) < today).length;
-
-    const ownerCounts: TasksByOwner = ownerOptions
-      .map((owner) => ({
-        name: owner,
-        value: tasks.filter((t) => t.Owner === owner).length,
-      }))
-      .filter((o) => o.value > 0);
+    const overdueCount = incompleteTasks.filter(t => t.Deadline && t.Deadline < today).length;
 
     // === 4. การคำนวณ Metrics เดิม (OPS, EFF, OTP) ===
 
@@ -813,7 +830,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     error,
 
     // Derived Data
-    filteredTasks,
+    // filteredTasks,
     operationScore,
     efficiencyRatio,
     onTimePerformance,
