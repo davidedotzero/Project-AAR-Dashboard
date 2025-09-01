@@ -61,8 +61,9 @@ const StatDisplayCard: React.FC<{
   <div className="relative group flex justify-center">
     <button
       onClick={onClick}
-      className={`flex items-center space-x-2 p-3 bg-gray-50 rounded-lg w-full text-left transition-all duration-200 ${isActive ? 'ring-2 ring-orange-500 shadow-md' : 'hover:bg-gray-100'
-        }`}
+      className={`flex items-center space-x-2 p-3 bg-gray-50 rounded-lg w-full text-left transition-all duration-200 ${
+        isActive ? "ring-2 ring-orange-500 shadow-md" : "hover:bg-gray-100"
+      }`}
     >
       <span className={`font-bold text-xl ${color}`}>{value}</span>
       <span className="text-sm text-gray-600">{label}</span>
@@ -75,7 +76,18 @@ const StatDisplayCard: React.FC<{
 );
 
 const RefreshIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
     <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
     <path d="M21 3v5h-5" />
     <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
@@ -83,45 +95,60 @@ const RefreshIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const SortIcon: React.FC<{ direction: 'asc' | 'desc' }> = ({ direction }) => (
-  <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    {direction === 'asc' ? (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+const SortIcon: React.FC<{ direction: "asc" | "desc" }> = ({ direction }) => (
+  <svg
+    className="w-4 h-4"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    {direction === "asc" ? (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M5 15l7-7 7 7"
+      />
     ) : (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M19 9l-7 7-7-7"
+      />
     )}
   </svg>
 );
 
 const formatDateToDDMMYYYY = (
-    dateString: string | null | undefined
-  ): string => {
-    if (!dateString) return "N/A";
-    // เนื่องจาก Format คือ YYYY-MM-DD
-    const parts = dateString.split("-");
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
-    }
-    return "N/A";
-  };
+  dateString: string | null | undefined
+): string => {
+  if (!dateString) return "N/A";
+  // เนื่องจาก Format คือ YYYY-MM-DD
+  const parts = dateString.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
+  }
+  return "N/A";
+};
 
-  const getTodayDDMMYYYY = () => {
-    const date = new Date();
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
-  };
+const getTodayYYYYMMDD = () => {
+  const date = new Date();
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${year}-${month}-${day}`;
+};
 
-  const getWarningDateDDMMYYYY = (daysAhead: number) => {
-    const date = new Date();
-    date.setDate(date.getDate() + daysAhead);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${day}-${month}-${year}`;
-  };
-
+const getWarningDateYYYYMMDD = (daysAhead: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + daysAhead);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 // --- Main Component: DashboardTab ---
 export const DashboardTab: React.FC = () => {
@@ -138,48 +165,54 @@ export const DashboardTab: React.FC = () => {
   const { projects, refreshAllData } = useData();
   const { openViewModal, openEditModal } = useUI();
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const handleStatFilterClick = (filterType: string) => {
-    setActiveStatFilter(prev => (prev === filterType ? null : filterType));
+    setActiveStatFilter((prev) => (prev === filterType ? null : filterType));
   };
 
   const handleSortByDeadline = () => {
-    setSortOrder(currentOrder => (currentOrder === 'asc' ? 'desc' : 'asc'));
+    setSortOrder((currentOrder) => (currentOrder === "asc" ? "desc" : "asc"));
   };
 
   const statDescriptions = {
     overdue: "งานที่ยังไม่เสร็จและเลยกำหนดส่งแล้ว",
     warning: "งานที่ยังไม่เสร็จและใกล้ถึงกำหนดส่งใน 10 วัน",
-    incomplete: "งานทั้งหมดที่ยังต้องดำเนินการ (สถานะไม่ใช่ 'เสร็จสิ้น' หรือ 'ยกเลิก')",
+    incomplete:
+      "งานทั้งหมดที่ยังต้องดำเนินการ (สถานะไม่ใช่ 'เสร็จสิ้น' หรือ 'ยกเลิก')",
     done: "งานทั้งหมดที่มีสถานะ 'เสร็จสิ้น'",
     helpMe: "งานที่ทีมกำลังร้องขอความช่วยเหลือ",
   };
 
   // --- KPIs Calculation (based on globally filtered tasks) ---
   const { statusMetrics, avgHelpLeadTime } = useMemo(() => {
-    const today = getTodayDDMMYYYY();
-    const warningDate = getWarningDateDDMMYYYY(10);
+    const today = getTodayYYYYMMDD();
+    const warningDate = getWarningDateYYYYMMDD(10);
 
-    const incompleteTasks = filteredTasks.filter(t => t.Status !== 'Done' && t.Status !== 'Cancelled');
-    const overdueCount = incompleteTasks.filter(t => t.Deadline && t.Deadline < today).length;
-    const warningCount = incompleteTasks.filter(t => {
+    const incompleteTasks = filteredTasks.filter(
+      (t) => t.Status !== "Done" && t.Status !== "Cancelled"
+    );
+    const overdueCount = incompleteTasks.filter(
+      (t) => t.Deadline && t.Deadline < today
+    ).length;
+    const warningCount = incompleteTasks.filter((t) => {
       if (!t.Deadline) return false;
-      const deadlineDate = new Date(t.Deadline);
       return t.Deadline >= today && t.Deadline <= warningDate;
     }).length;
-    
-    const doneCount = filteredTasks.filter(t => t.Status === 'Done').length;
-    const helpMeCount = filteredTasks.filter(t => t.Status === 'Help Me').length;
+
+    const doneCount = filteredTasks.filter((t) => t.Status === "Done").length;
+    const helpMeCount = filteredTasks.filter(
+      (t) => t.Status === "Help Me"
+    ).length;
 
     const tasksRequestingHelp = filteredTasks.filter(
-      t => t.Status === 'Help Me' && t.HelpRequestedAt && t.Deadline
+      (t) => t.Status === "Help Me" && t.HelpRequestedAt && t.Deadline
     );
 
     let totalLeadTime = 0;
     let validRequests = 0;
     if (tasksRequestingHelp.length > 0) {
-      tasksRequestingHelp.forEach(task => {
+      tasksRequestingHelp.forEach((task) => {
         const requestDate = new Date(task.HelpRequestedAt!);
         const deadlineDate = new Date(task.Deadline!);
         if (!isNaN(requestDate.getTime()) && !isNaN(deadlineDate.getTime())) {
@@ -191,9 +224,10 @@ export const DashboardTab: React.FC = () => {
       });
     }
 
-    const avgLeadTime = tasksRequestingHelp.length > 0
-      ? (totalLeadTime / tasksRequestingHelp.length).toFixed(1)
-      : 'N/A';
+    const avgLeadTime =
+      tasksRequestingHelp.length > 0
+        ? (totalLeadTime / tasksRequestingHelp.length).toFixed(1)
+        : "N/A";
 
     const metrics = {
       overdue: overdueCount,
@@ -214,50 +248,54 @@ export const DashboardTab: React.FC = () => {
 
   // Final filtering and sorting
   const finalSortedTasks = useMemo(() => {
-    const today = getTodayDDMMYYYY();
-    const warningDate = getWarningDateDDMMYYYY(10);
+    const today = getTodayYYYYMMDD();
+    const warningDate = getWarningDateYYYYMMDD(10);
 
     let tasksToProcess = filteredTasks;
 
     // 1. Apply Stat Card Filtering
     if (activeStatFilter) {
-      const incomplete = tasksToProcess.filter(t => t.Status !== 'Done' && t.Status !== 'Cancelled');
+      const incomplete = tasksToProcess.filter(
+        (t) => t.Status !== "Done" && t.Status !== "Cancelled"
+      );
       switch (activeStatFilter) {
-        case 'Overdue':
-          tasksToProcess = incomplete.filter(t => t.Deadline && t.Deadline < today);
+        case "Overdue":
+          tasksToProcess = incomplete.filter(
+            (t) => t.Deadline && t.Deadline < today
+          );
           break;
-        case 'Warning':
-          tasksToProcess = incomplete.filter(t => {
+        case "Warning":
+          tasksToProcess = incomplete.filter((t) => {
             if (!t.Deadline) return false;
             return t.Deadline >= today && t.Deadline <= warningDate;
           });
           break;
-        case 'Incomplete':
+        case "Incomplete":
           tasksToProcess = incomplete;
           break;
-        case 'Done':
-          tasksToProcess = tasksToProcess.filter(t => t.Status === 'Done');
+        case "Done":
+          tasksToProcess = tasksToProcess.filter((t) => t.Status === "Done");
           break;
-        case 'Help Me':
-          tasksToProcess = tasksToProcess.filter(t => t.Status === 'Help Me');
+        case "Help Me":
+          tasksToProcess = tasksToProcess.filter((t) => t.Status === "Help Me");
           break;
       }
     }
 
     // 2. Sorting
     const sorted = [...tasksToProcess].sort((a, b) => {
-      const aHasDeadline = a.Deadline != null && a.Deadline !== '';
-      const bHasDeadline = b.Deadline != null && b.Deadline !== '';
+      const aHasDeadline = a.Deadline != null && a.Deadline !== "";
+      const bHasDeadline = b.Deadline != null && b.Deadline !== "";
 
-      if (aHasDeadline && !bHasDeadline) return sortOrder === 'asc' ? -1 : 1;
-      if (!aHasDeadline && bHasDeadline) return sortOrder === 'asc' ? 1 : -1;
+      if (aHasDeadline && !bHasDeadline) return sortOrder === "asc" ? -1 : 1;
+      if (!aHasDeadline && bHasDeadline) return sortOrder === "asc" ? 1 : -1;
       if (!aHasDeadline && !bHasDeadline) return 0;
 
       if (a.Deadline! < b.Deadline!) {
-        return sortOrder === 'asc' ? -1 : 1;
+        return sortOrder === "asc" ? -1 : 1;
       }
       if (a.Deadline! > b.Deadline!) {
-        return sortOrder === 'asc' ? 1 : -1;
+        return sortOrder === "asc" ? 1 : -1;
       }
       return 0;
     });
@@ -282,24 +320,71 @@ export const DashboardTab: React.FC = () => {
       {/* KPIs Summary Section */}
       <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-md font-bold text-gray-700">สรุปสถานะ Task (จากผลการกรอง)</h3>
-          <button onClick={ refreshAllData } className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-full transition-colors" aria-label="Refresh data">
+          <h3 className="text-md font-bold text-gray-700">
+            สรุปสถานะ Task (จากผลการกรอง)
+          </h3>
+          <button
+            onClick={refreshAllData}
+            className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-full transition-colors"
+            aria-label="Refresh data"
+          >
             <RefreshIcon className="w-5 h-5" />
           </button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <StatDisplayCard label="Overdue" value={statusMetrics.overdue} color="text-red-500" isActive={activeStatFilter === 'Overdue'} onClick={() => handleStatFilterClick('Overdue')} description={statDescriptions.overdue} />
-          <StatDisplayCard label="Warning" value={statusMetrics.warning} color="text-yellow-500" isActive={activeStatFilter === 'Warning'} onClick={() => handleStatFilterClick('Warning')} description={statDescriptions.warning} />
-          <StatDisplayCard label="Incomplete" value={statusMetrics.incomplete} color="text-blue-500" isActive={activeStatFilter === 'Incomplete'} onClick={() => handleStatFilterClick('Incomplete')} description={statDescriptions.incomplete} />
-          <StatDisplayCard label="Done" value={statusMetrics.done} color="text-green-500" isActive={activeStatFilter === 'Done'} onClick={() => handleStatFilterClick('Done')} description={statDescriptions.done} />
-          <StatDisplayCard label="Help Me" value={statusMetrics.helpMe} color="text-purple-500" isActive={activeStatFilter === 'Help Me'} onClick={() => handleStatFilterClick('Help Me')} description={statDescriptions.helpMe} />
+          <StatDisplayCard
+            label="Overdue"
+            value={statusMetrics.overdue}
+            color="text-red-500"
+            isActive={activeStatFilter === "Overdue"}
+            onClick={() => handleStatFilterClick("Overdue")}
+            description={statDescriptions.overdue}
+          />
+          <StatDisplayCard
+            label="Warning"
+            value={statusMetrics.warning}
+            color="text-yellow-500"
+            isActive={activeStatFilter === "Warning"}
+            onClick={() => handleStatFilterClick("Warning")}
+            description={statDescriptions.warning}
+          />
+          <StatDisplayCard
+            label="Incomplete"
+            value={statusMetrics.incomplete}
+            color="text-blue-500"
+            isActive={activeStatFilter === "Incomplete"}
+            onClick={() => handleStatFilterClick("Incomplete")}
+            description={statDescriptions.incomplete}
+          />
+          <StatDisplayCard
+            label="Done"
+            value={statusMetrics.done}
+            color="text-green-500"
+            isActive={activeStatFilter === "Done"}
+            onClick={() => handleStatFilterClick("Done")}
+            description={statDescriptions.done}
+          />
+          <StatDisplayCard
+            label="Help Me"
+            value={statusMetrics.helpMe}
+            color="text-purple-500"
+            isActive={activeStatFilter === "Help Me"}
+            onClick={() => handleStatFilterClick("Help Me")}
+            description={statDescriptions.helpMe}
+          />
         </div>
         <div className="mt-4 pt-4 border-t">
           <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-700">ระยะเวลาเฉลี่ยที่ขอความช่วยเหลือก่อน Deadline:</span>
-            <span className="ml-2 font-bold text-lg text-gray-800">{avgHelpLeadTime}</span>
+            <span className="text-sm font-medium text-gray-700">
+              ระยะเวลาเฉลี่ยที่ขอความช่วยเหลือก่อน Deadline:
+            </span>
+            <span className="ml-2 font-bold text-lg text-gray-800">
+              {avgHelpLeadTime}
+            </span>
             {/* [✅ แก้ไข] แสดงหน่วย "วัน" เมื่อมีค่าเท่านั้น */}
-            {avgHelpLeadTime !== 'N/A' && <span className="ml-1 text-sm text-gray-600">วัน</span>}
+            {avgHelpLeadTime !== "N/A" && (
+              <span className="ml-1 text-sm text-gray-600">วัน</span>
+            )}
           </div>
         </div>
       </div>
@@ -367,12 +452,19 @@ export const DashboardTab: React.FC = () => {
         <div className="flex justify-between items-center pt-4 border-t mt-6">
           <p className="text-lg font-semibold text-gray-800">
             พบผลลัพธ์:{" "}
-            <span className="text-orange-500">{finalSortedTasks.length}</span> รายการ
+            <span className="text-orange-500">{finalSortedTasks.length}</span>{" "}
+            รายการ
           </p>
           <button
-            onClick={() => { resetFilters(); setActiveStatFilter(null); }}
+            onClick={() => {
+              resetFilters();
+              setActiveStatFilter(null);
+            }}
             className="px-4 py-2 text-sm text-gray-600 hover:text-orange-500 transition duration-150 disabled:opacity-40"
-            disabled={Object.values(selections).every((v) => v === null || v === "") && !activeStatFilter}
+            disabled={
+              Object.values(selections).every((v) => v === null || v === "") &&
+              !activeStatFilter
+            }
           >
             ล้างตัวกรองทั้งหมด
           </button>
@@ -385,18 +477,35 @@ export const DashboardTab: React.FC = () => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <button onClick={handleSortByDeadline} className="flex items-center space-x-1 hover:text-gray-800 transition-colors">
+                <button
+                  onClick={handleSortByDeadline}
+                  className="flex items-center space-x-1 hover:text-gray-800 transition-colors"
+                >
                   <span>Deadline</span>
                   <SortIcon direction={sortOrder} />
                 </button>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action (Task)</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operation (Project)</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Note</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Help Assignee</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Help Details</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Owner
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Action (Task)
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Operation (Project)
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Note
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Help Assignee
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Help Details
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
               <th className="px-6 py-3"></th>
             </tr>
           </thead>
@@ -405,21 +514,51 @@ export const DashboardTab: React.FC = () => {
               const userCanEdit = canEditTask(user, task);
               return (
                 <tr key={task._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDateToDDMMYYYY(task.Deadline)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{task.Owner || "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-md" title={task.Task}>{task.Task}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm" title={getProjectName(task.ProjectID)}>{getProjectName(task.ProjectID)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm" title={task['Notes / Result']}>
-                    {truncateText(task['Notes / Result'], 10)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-medium">{task.HelpAssignee || "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs" title={task.HelpDetails}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDateToDDMMYYYY(task.Deadline)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {task.Owner || "-"}
+                  </td>
+                  <td
+                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-md"
+                    title={task.Task}
+                  >
+                    {task.Task}
+                  </td>
+                  <td
+                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm"
+                    title={getProjectName(task.ProjectID)}
+                  >
+                    {getProjectName(task.ProjectID)}
+                  </td>
+                  <td
+                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm"
+                    title={task["Notes / Result"]}
+                  >
+                    {truncateText(task["Notes / Result"], 10)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-medium">
+                    {task.HelpAssignee || "-"}
+                  </td>
+                  <td
+                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs"
+                    title={task.HelpDetails}
+                  >
                     {truncateText(task.HelpDetails, 10)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{task.Status}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {task.Status}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     {userCanEdit && (
                       // <button onClick={() => openViewModal(task, finalSortedTasks)} className="text-indigo-600 hover:text-indigo-900 mr-3">View</button>
-                      <button onClick={() => openEditModal(task)} className="text-orange-600 hover:text-orange-900">Edit</button>
+                      <button
+                        onClick={() => openEditModal(task)}
+                        className="text-orange-600 hover:text-orange-900"
+                      >
+                        Edit
+                      </button>
                     )}
                   </td>
                 </tr>

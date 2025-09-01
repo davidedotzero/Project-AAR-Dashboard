@@ -22,6 +22,16 @@ const DetailItem: React.FC<{ label: string; children: React.ReactNode }> = ({
 );
 
 // --- Helper function to calculate day difference ---
+const formatDateToDDMMYYYY = (dateString: string | null | undefined): string => {
+    if (!dateString) return "N/A";
+    // Input format คือ YYYY-MM-DD
+    const parts = dateString.split("-");
+    if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return "N/A";
+};
+
 const calculateLeadTime = (deadline?: string, requestDate?: string): string => {
     if (!deadline || !requestDate) {
         return "N/A";
@@ -78,11 +88,7 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
         </DetailItem>
 
         <DetailItem label="Deadline">
-          <p>
-            {task.Deadline
-              ? new Date(task.Deadline).toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' })
-              : "N/A"}
-          </p>
+          <p>{formatDateToDDMMYYYY(task.Deadline)}</p>
         </DetailItem>
 
         <DetailItem label="Est. Hours">
@@ -101,9 +107,7 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
                 <DetailItem label="วันที่ร้องขอ">
                     <p className="font-semibold">
-                        {task.HelpRequestedAt
-                        ? new Date(task.HelpRequestedAt).toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' })
-                        : "-"}
+                        {formatDateToDDMMYYYY(task.HelpRequestedAt) || "-"}
                     </p>
                 </DetailItem>
                 <DetailItem label="ขอความช่วยเหลือจาก">
@@ -151,6 +155,7 @@ interface EditTaskModalProps {
   onNavigate: (direction: "next" | "previous") => void;
   canNavigatePrev: boolean;
   canNavigateNext: boolean;
+  isLoading: boolean;
 }
 
 const FormField: React.FC<{ label: string; children: React.ReactNode }> = ({
@@ -174,6 +179,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   onNavigate,
   canNavigatePrev,
   canNavigateNext,
+  isLoading,
 }) => {
   const [formData, setFormData] = useState<Task | null>(null);
 
@@ -181,12 +187,8 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
     if (task) {
       const formattedTask = {
         ...task,
-        Deadline: task.Deadline
-          ? new Date(task.Deadline).toISOString().split("T")[0]
-          : "",
-        HelpRequestedAt: task.HelpRequestedAt
-          ? new Date(task.HelpRequestedAt).toISOString().split("T")[0]
-          : "",
+        Deadline: task.Deadline || "",
+        HelpRequestedAt: task.HelpRequestedAt || "",
       };
       setFormData(formattedTask);
     }
@@ -209,8 +211,9 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
         
         if (name === 'Status') {
             if (value === 'Help Me' && !updatedData.HelpRequestedAt) {
-                // Set request date to today, only if it's not already set
-                updatedData.HelpRequestedAt = new Date().toISOString().split("T")[0];
+                const today = new Date();
+                const formattedToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                updatedData.HelpRequestedAt = formattedToday;
             } else if (value !== 'Help Me') {
                 // If status is changed away from "Help Me", clear all related fields
                 updatedData.HelpRequestedAt = '';
@@ -223,12 +226,15 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+ const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return; // ป้องกันการ Submit ซ้ำ
+
     if (formData) {
         onSave(formData);
     }
   };
+  
 
   const helpLeadTime = useMemo(() => {
     return calculateLeadTime(formData?.Deadline, formData?.HelpRequestedAt);
@@ -239,6 +245,12 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
   if (!isOpen || !formData) return null;
 
+  const handleClose = () => {
+    if (!isLoading) {
+      onClose();
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center p-4"
@@ -248,12 +260,20 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
         className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
+        <header className="flex justify-between items-center p-6 border-b sticky top-0 bg-white z-10">
+            <h2 className="text-xl font-bold text-gray-800">
+                {isViewOnly ? 'รายละเอียด Task' : 'แก้ไข Task'}
+            </h2>
+            <button onClick={handleClose} disabled={isLoading} className="text-gray-400 hover:text-gray-600 disabled:opacity-30">&times;</button>
+        </header>
         {/* ... Header remains the same ... */}
         <div className="overflow-y-auto">
           {isViewOnly ? (
             <TaskDetailsView task={formData} />
           ) : (
             <form onSubmit={handleSubmit} className="overflow-y-auto">
+              <fieldset disabled={isLoading}>
               <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <div className="md:col-span-2">
                   <FormField label="Task">
@@ -346,13 +366,27 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
               </div>
 
               <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-                <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none">
+                <button type="button" onClick={handleClose} disabled={isLoading} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50">
                   ยกเลิก
                 </button>
-                <button type="submit" className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none">
-                  บันทึก
+                <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                   {isLoading ? (
+                        <span className="flex items-center">
+                             {/* Loading Spinner SVG */}
+                             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            กำลังบันทึก...
+                        </span>
+                    ) : 'บันทึก'}
                 </button>
               </div>
+              </fieldset>
             </form>
           )}
         </div>

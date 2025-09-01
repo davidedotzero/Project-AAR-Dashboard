@@ -117,7 +117,6 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
-  const { fetchTasks, selectedProjectId } = useData();
   const { openCreateTaskModal } = useUI();
   // State สำหรับ Bulk Action
   // ใช้ Set เพื่อประสิทธิภาพในการจัดการ ID
@@ -127,11 +126,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [newDeadline, setNewDeadline] = useState<string>("");
 
-  const { refreshAllData } = useData();
-
-  // const handleRefresh = () => {
-  //   refreshAllData();
-  // };
+  const { refreshAllData, selectedProjectId  } = useData();
 
   const handleStatFilterClick = (filterType: string) => {
     setActiveStatFilter((prev) => (prev === filterType ? null : filterType));
@@ -146,50 +141,38 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     helpMe: "งานที่ทีมกำลังร้องขอความช่วยเหลือ",
   };
 
-  // const formatDateToDDMMYYYY = (
-  //   dateString: string | null | undefined
-  // ): string => {
-  //   if (!dateString) return "N/A";
-  //   const date = new Date(dateString);
-  //   if (isNaN(date.getTime())) return "N/A";
-  //   const day = String(date.getUTCDate()).padStart(2, "0");
-  //   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  //   const year = date.getUTCFullYear();
-  //   return `${day}/${month}/${year}`;
-  // };
-  const formatDateToDDMMYYYY = (
+ const formatDateToDDMMYYYY = (
     dateString: string | null | undefined
   ): string => {
     if (!dateString) return "N/A";
-    // เนื่องจาก Format คือ YYYY-MM-DD
     const parts = dateString.split("-");
     if (parts.length === 3) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
     }
     return "N/A";
   };
-
-  const getTodayDDMMYYYY = () => {
+//ฟังก์ชันสำหรับคำนวณ ต้องเป็น YYYY-MM-DD
+  const getTodayYYYYMMDD = () => {
     const date = new Date();
     const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
+    return `${year}-${month}-${day}`;
   };
 
-  const getWarningDateDDMMYYYY = (daysAhead: number) => {
+const getWarningDateYYYYMMDD = (daysAhead: number) => {
     const date = new Date();
     date.setDate(date.getDate() + daysAhead);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    return `${day}-${month}-${year}`;
+    return `${year}-${month}-${day}`;
   };
 
   // --- KPIs Calculation ---
   const { statusMetrics } = useMemo(() => {
-    const today = getTodayDDMMYYYY();
-    const warningDate = getWarningDateDDMMYYYY(10);
+    const today = getTodayYYYYMMDD();
+    const warningDate = getWarningDateYYYYMMDD(10);
 
     const incompleteTasks = tasks.filter(
       (t) => t.Status !== "Done" && t.Status !== "Cancelled"
@@ -217,8 +200,8 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   }, [tasks]);
 
   const filteredAndSortedTasks = useMemo(() => {
-    const today = getTodayDDMMYYYY();
-    const warningDate = getWarningDateDDMMYYYY(10);
+    const today = getTodayYYYYMMDD();
+    const warningDate = getWarningDateYYYYMMDD(10);
 
     let tasksToProcess = tasks;
 
@@ -442,13 +425,18 @@ export const TasksTab: React.FC<TasksTabProps> = ({
           <h3 className="text-md font-bold text-gray-700">
             ตัวกรองและเครื่องมือ
           </h3>
+          {selectedProjectId && selectedProjectId !== 'ALL' ?  (
           <button
             onClick={openCreateTaskModal}
             className="bg-orange-500 hover:bg-orange-600 text-white font-bold flex px-4 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
             <PlusIcon className="w-4 h-4" />
             <span>เพิ่ม Task</span>
-          </button>
+          </button>)  : (
+            <div className="text-sm text-gray-500 italic">
+              (เลือกโปรเจกต์เพื่อเพิ่ม Task)
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>

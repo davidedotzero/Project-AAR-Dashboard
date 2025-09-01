@@ -188,7 +188,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         const date = new Date(gasDate); // Browser ตีความตาม Local Time
         if (isNaN(date.getTime())) return "";
 
-        // ดึงค่าตาม Local Time และจัดรูปแบบ
+        // จัดรูปแบบ YYYY-MM-DD
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
@@ -224,7 +224,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         MilestoneID: t.MilestoneID,
         HelpAssignee: t.HelpAssignee || null,
         HelpDetails: t.HelpDetails || null,
-        HelpRequestedAt: t.HelpRequestedAt || null,
+        HelpRequestedAt: formatToLocalISODate(t.HelpRequestedAt) || null,
       }));
     },
     [phaseOrder]
@@ -671,16 +671,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     overdueTaskCount,
   } = useMemo(() => {
 
-    const getTodayDDMMYYYY = () => {
+    const getTodayYYYYMMDD = () => {
       const date = new Date();
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear();
-      return `${day}-${month}-${year}`;
+      return `${year}-${month}-${day}`; // YYYY-MM-DD
     };
 
-    const today = getTodayDDMMYYYY();
-    // แยกการคำนวณ Global และ Scoped
+    const today = getTodayYYYYMMDD();
 
     // 1. Global Counts (ใช้ allTasks)
     const globalStatusCounts: TasksByStatus = statusOptions.map((status) => ({
