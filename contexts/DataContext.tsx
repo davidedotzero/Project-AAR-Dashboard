@@ -116,6 +116,7 @@ interface DataContextType {
   setSelectedProjectId: (id: string | null) => void;
   handleProjectSelect: (projectId: string) => void;
   saveTask: (updatedTask: Task) => Promise<void>;
+  bulkUpdateDeadline: (taskIds: string[], newDeadline: string) => Promise<void>;
   createProject: (
     projectName: string,
     priority: number,
@@ -185,10 +186,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
       return sortedData.map((t: any) => ({
         // สร้าง _id ที่เสถียร
-        _id:
+        _id: t._id || (
           t.ProjectID && t.rowIndex
             ? `${t.ProjectID}-${t.rowIndex}`
-            : `temp-${uuidv4()}`,
+            : `temp-${uuidv4()}`
+          ),
         rowIndex: t.rowIndex,
         ProjectID: t.ProjectID,
         Check:
@@ -210,6 +212,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         "Owner Feedback": t["Owner Feedback"],
         "Project Feedback": t["Project Feedback"],
         MilestoneID: t.MilestoneID,
+        HelpAssignee: t.HelpAssignee || null,
+        HelpDetails: t.HelpDetails || null,
+        HelpRequestedAt: t.HelpRequestedAt || null,
       }));
     },
     [phaseOrder]
@@ -366,7 +371,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   // --- Data Mutations & Actions ---
 
   // Helper สำหรับจัดการสถานะ Loading/Error สำหรับการ Create/Update/Delete
-  const handleApiAction = async (action: () => Promise<void>) => {
+  const handleApiAction = useCallback(async (action: () => Promise<void>) => {
     setIsOperating(true);
     setError(null);
     try {
@@ -378,7 +383,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     } finally {
       setIsOperating(false);
     }
-  };
+  },[]);
 
   const handleProjectSelect = useCallback(
     (projectId: string) => {
@@ -424,9 +429,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         // 3. Rollback UI หาก Backend ทำงานล้มเหลว
         setTasks(previousTasks);
         setAllTasks(previousAllTasks);
+        throw err; // ส่งต่อ Error
       }
     },
-    [user, closeModals]
+    [user, closeModals, handleApiAction]
   );
 
   const createProject = useCallback(
@@ -455,8 +461,71 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         closeModals();
       });
     },
-    [user, refreshAllData, setActiveTab, closeModals]
+    [user, refreshAllData, setActiveTab, closeModals, handleApiAction]
   );
+
+  // [✅ เพิ่มใหม่] Bulk Update Deadline พร้อม Optimistic Update และ Rollback
+  const bulkUpdateDeadline = useCallback(async (taskIds: string[], newDeadline: string): Promise<void> => {
+    if (!user || taskIds.length === 0) return;
+
+    // 1. เก็บ State เก่าไว้เผื่อ Rollback
+    let previousAllTasks: Task[] = [];
+    let previousTasks: Task[] = [];
+
+    // 2. กำหนด Logic การอัปเดต
+    const optimisticUpdate = (prevTasks: Task[]) => {
+        return prevTasks.map(task => {
+            if (taskIds.includes(task._id)) {
+                // สร้าง Object ใหม่พร้อม Deadline ที่อัปเดต
+                return { ...task, Deadline: newDeadline };
+            }
+            return task;
+        });
+    };
+
+    // 3. Optimistic UI update (อัปเดตหน้าจอทันที)
+    // อัปเดต allTasks เสมอ
+    setAllTasks(prev => {
+        previousAllTasks = prev;
+        return optimisticUpdate(prev);
+    });
+
+    // อัปเดต tasks (current view) ถ้าไม่ได้เลือก "ALL"
+    // (ถ้าเลือก "ALL" อยู่แล้ว tasks จะอัปเดตอัตโนมัติตาม Effect 3 ด้านบน)
+    if (selectedProjectId !== "ALL") {
+        setTasks(prev => {
+            previousTasks = prev;
+            return optimisticUpdate(prev);
+        });
+    }
+
+    // 4. ส่งข้อมูลไป Backend
+    try {
+        await handleApiAction(async () => {
+            // [✅ แก้ไข] เรียกใช้ apiRequest
+            await apiRequest({
+                op: "bulkUpdateTasks",
+                user: user, // ส่ง User ไปตรวจสอบสิทธิ์
+                payload: {
+                    taskIds: taskIds,
+                    updates: {
+                        "Deadline": newDeadline
+                    }
+                }
+            });
+            // หากสำเร็จ ไม่ต้องทำอะไรเพิ่มเติม เพราะ UI อัปเดตไปแล้ว
+        });
+    } catch (err) {
+        // 5. Rollback UI หาก Backend ทำงานล้มเหลว
+        console.error("Bulk update failed, rolling back UI.");
+        setAllTasks(previousAllTasks);
+        if (selectedProjectId !== "ALL") {
+            setTasks(previousTasks);
+        }
+        // [สำคัญ] ต้อง Throw error กลับไปด้วย เพื่อให้ TasksTab.tsx รู้ว่าล้มเหลว
+        throw err;
+    }
+  }, [user, selectedProjectId, handleApiAction]);
 
   // [✅ แก้ไข] ปรับโครงสร้างการส่งข้อมูลให้ใช้ payload
   const updateProject = useCallback(
@@ -485,7 +554,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         closeModals();
       });
     },
-    [user, fetchProjects, closeModals]
+    [user, fetchProjects, closeModals, handleApiAction]
   );
 
   // [✅ แก้ไข] ปรับโครงสร้างการส่งข้อมูลให้ใช้ payload
@@ -509,7 +578,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         closeModals();
       });
     },
-    [user, selectedProjectId, fetchTasksForProject, fetchAllTasks, closeModals]
+    [user, selectedProjectId, fetchTasksForProject, fetchAllTasks, closeModals, handleApiAction]
   );
 
   // [✅ แก้ไข] ปรับโครงสร้างการส่งข้อมูลให้ใช้ payload
@@ -563,7 +632,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         setAllTasks(previousAllTasks);
       }
     }
-  }, [user, itemToDelete, refreshAllData, closeModals]);
+  }, [user, itemToDelete, refreshAllData, closeModals,handleApiAction]);
 
   // --- Derived/Calculated Data (Memoized) ---
   // (ส่วนการคำนวณสถิติไม่มีการเปลี่ยนแปลง)
@@ -766,6 +835,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     createTask,
     confirmDelete,
     refreshAllData,
+    bulkUpdateDeadline,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -30,7 +30,6 @@ const ErrorDisplay: React.FC<{ message: string }> = ({ message }) => (
     </div>
 );
 
-
 const AppContent = () => {
   // All data and UI hooks are called here, unconditionally.
   const { 
@@ -70,6 +69,7 @@ const AppContent = () => {
     updateProject,
     createTask,
     confirmDelete,
+    bulkUpdateDeadline,
   } = useData();
   
   const { user } = useAuth();
@@ -91,6 +91,7 @@ const AppContent = () => {
                     onEditTask={openEditModal}
                     onTaskView={(task) => openViewModal(task, tasks)}
                     onDeleteTask={(task) => openDeleteModal("task", task)}
+                    onBulkUpdateDeadline={bulkUpdateDeadline}
                 />;
       case "profile":
         return <ProfileTab />;
