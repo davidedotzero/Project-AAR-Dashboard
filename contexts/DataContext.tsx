@@ -450,7 +450,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       if (!user) return;
       const newProjectId = `PROJ-${uuidv4().slice(0, 8).toUpperCase()}`;
 
-      const selectedTaskNames = selectedTasks.map((task) => task.Task);
+      // const selectedTaskNames = selectedTasks.map((task) => task.Task);
+      const tasksPayload = selectedTasks.map(task => {
+        const {
+            _id,
+            rowIndex,
+            ProjectID,
+            Check,
+            // แยกฟิลด์ Help ออก เผื่อ Backend ยังไม่รองรับในการสร้างโปรเจกต์
+            HelpAssignee,
+            HelpDetails,
+            HelpRequestedAt,
+            ...taskDetails
+        } = task;
+        return {
+          ...taskDetails,
+          // ตรวจสอบให้แน่ใจว่าค่าสำคัญมีครบถ้วนตามที่กำหนดใน Modal
+          "Est. Hours": task["Est. Hours"] || 8,
+          "Impact Score": task["Impact Score"] || 3,
+          Status: task.Status || 'Not Started',
+          // Deadline, Owner, Task name จะอยู่ใน taskDetails อยู่แล้ว
+        };
+      });
 
       await handleApiAction(async () => {
         await apiRequest({
@@ -460,7 +481,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             projectId: newProjectId,
             projectName: projectName,
             priority: priority,
-            selectedTasks: selectedTaskNames,
+            selectedTasks: tasksPayload,
           },
         });
 

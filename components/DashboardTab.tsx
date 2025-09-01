@@ -414,7 +414,7 @@ export const DashboardTab: React.FC = () => {
             disabled={isLoading}
           />
           {/* +++ START: เพิ่มช่องเลือกวันที่ +++ */}
-          {/* <div className="flex flex-col">
+          <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 mb-2">วันที่เริ่มต้น (Deadline)</label>
             <input
               type="date"
@@ -433,7 +433,7 @@ export const DashboardTab: React.FC = () => {
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50"
               disabled={isLoading}
             />
-          </div> */}
+          </div>
           {/* +++ END: เพิ่มช่องเลือกวันที่ +++ */}
         </div>
         <div className="flex flex-col">

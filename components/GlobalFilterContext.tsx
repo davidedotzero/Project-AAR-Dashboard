@@ -44,7 +44,7 @@ const INITIAL_SELECTIONS: FilterSelections = {
 
 // --- Provider Component ---
 export const GlobalFilterProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { allTasks, projects, isLoadingAllTasks } = useData();
+  const { allTasks, tasks, projects, isLoadingAllTasks } = useData();
   const [selections, setSelections] = useState<FilterSelections>(INITIAL_SELECTIONS);
 
   // --- Actions ---
