@@ -2,7 +2,7 @@
 import React, { createContext, useState, useContext, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import type { Task, Project } from '../types';
-import { ownerOptions as allOwnerOptions , statusOptions } from '../constants'; 
+// import { ownerOptions as allOwnerOptions , statusOptions } from '../constants'; 
 
 // --- Types ---
 interface FilterSelections {
@@ -25,7 +25,7 @@ interface GlobalFilterContextType {
   options: AvailableOptions;
   filteredTasks: Task[];
   isLoading: boolean;
-  setFilter: (type: keyof Omit<FilterSelections, 'searchQuery'>, value: string | null) => void;
+  setFilter: (type: keyof FilterSelections, value: string | null) => void;
   setSearchQuery: (query: string) => void;
   resetFilters: () => void;
 }
@@ -64,165 +64,119 @@ export const GlobalFilterProvider: React.FC<{ children: ReactNode }> = ({ childr
     setSelections(INITIAL_SELECTIONS);
   };
 
-  // --- Core Logic: Faceted Search (Cascading Options) & Filtering ---
-  // [✅ ปรับปรุง] คำนวณ Options แบบ Dynamic
-  const options = useMemo(() => {
-    const ownersSet = new Set<string>();
-    allTasks.forEach(task => {
-      // รวบรวม Owner และ HelpAssignee ทั้งหมดที่มีในระบบ
-      if (task.Owner) ownersSet.add(task.Owner);
-      if (task.HelpAssignee) ownersSet.add(task.HelpAssignee);
-    });
+  // ===================================================================
+  // [✅✅✅ หัวใจสำคัญ: Logic การกรองแบบ Faceted Search]
+  // ===================================================================
+  // คำนวณทั้งผลลัพธ์และตัวเลือกแบบ Dynamic ในคราวเดียวเพื่อประสิทธิภาพ (O(N))
+  const { filteredTasks, options } = useMemo(() => {
+    const { owner, projectId, status, searchQuery, startDate, endDate } = selections;
+    const query = searchQuery.toLowerCase().trim();
 
-    return {
-        owners: Array.from(ownersSet).sort(),
-        statuses: statusOptions,
-        projects: projects,
+    // Sets สำหรับเก็บ Options ที่ยังใช้ได้ (Faceted)
+    const availableOwners = new Set<string>();
+    const availableProjectIds = new Set<string>();
+    const availableStatuses = new Set<string>();
+    const finalFilteredTasks: Task[] = [];
+
+    // Helper: ตรวจสอบการค้นหา
+    const matchesSearch = (task: Task): boolean => {
+        if (!query) return true;
+        const fieldsToSearch = [
+            task.Task,
+            task["Notes / Result"],
+            task.Owner,
+            task.HelpAssignee, // รวม HelpAssignee ในการค้นหา
+        ];
+        return fieldsToSearch.some(field =>
+            typeof field === 'string' && field.toLowerCase().includes(query)
+        );
     };
-  }, [allTasks, projects]);
 
-  // *** หัวใจสำคัญ: Logic การกรองข้อมูล (Filtering Logic) ***
-  const filteredTasks = useMemo(() => {
-    const query = selections.searchQuery.toLowerCase().trim();
+    // Helper: ตรวจสอบช่วงวันที่ (ใช้การเปรียบเทียบ String YYYY-MM-DD)
+    const matchesDateRange = (task: Task): boolean => {
+        if (!startDate && !endDate) return true;
+        if (!task.Deadline) return false; // ถ้ากรองวันที่ Task ที่ไม่มี Deadline จะไม่แสดง
 
-    return allTasks.filter(task => {
-      // 1. Owner Filter (ตรวจสอบทั้ง Owner และ HelpAssignee)
-      if (selections.owner) {
-        const isOwner = task.Owner === selections.owner;
-        const isAssignee = task.HelpAssignee === selections.owner;
-        if (!isOwner && !isAssignee) return false;
+        if (startDate && task.Deadline < startDate) return false;
+        if (endDate && task.Deadline > endDate) return false;
+        return true;
+    };
+
+    // Loop ผ่าน Task ทั้งหมดเพียงรอบเดียว
+    for (const task of allTasks) {
+
+      // 1. คำนวณว่า Task นี้ตรงกับเงื่อนไขแต่ละข้อหรือไม่
+      // [✅] Logic การกรอง Owner รวม HelpAssignee
+      const matchesOwner = !owner || task.Owner === owner || task.HelpAssignee === owner;
+      const matchesProject = !projectId || task.ProjectID === projectId;
+      const matchesStatus = !status || task.Status === status;
+      const matchesSearchCheck = matchesSearch(task);
+      const matchesDateRangeCheck = matchesDateRange(task);
+
+      // 2. กรองผลลัพธ์สุดท้าย (ต้องตรงกับทุกเงื่อนไข - AND Logic)
+      if (matchesOwner && matchesProject && matchesStatus && matchesSearchCheck && matchesDateRangeCheck) {
+          finalFilteredTasks.push(task);
       }
 
-      // 2. Project Filter
-      if (selections.projectId && task.ProjectID !== selections.projectId) {
-        return false;
+      // 3. คำนวณ Options สำหรับ Faceted Search (ต้องตรงกับเงื่อนไขอื่นๆ แต่ไม่สนเงื่อนไขของตัวเอง)
+
+      // 3a. หา Projects ที่ยังใช้ได้ (ไม่สนใจ Project filter)
+      if (matchesOwner && matchesStatus && matchesSearchCheck && matchesDateRangeCheck) {
+          if (task.ProjectID) availableProjectIds.add(task.ProjectID);
       }
 
-      // 3. Status Filter
-      if (selections.status && task.Status !== selections.status) {
-        return false;
+      // 3b. หา Statuses ที่ยังใช้ได้ (ไม่สนใจ Status filter)
+      if (matchesOwner && matchesProject && matchesSearchCheck && matchesDateRangeCheck) {
+          if (task.Status) availableStatuses.add(task.Status);
       }
 
-      // 4. Date Range Filter (Deadline)
-      // [✅ ปรับปรุง] ใช้การเปรียบเทียบ String (YYYY-MM-DD)
-      if (selections.startDate) {
-        if (!task.Deadline || task.Deadline < selections.startDate) {
-          return false;
+      // 3c. หา Owners/Assignees ที่ยังใช้ได้ (ไม่สนใจ Owner filter)
+      if (matchesProject && matchesStatus && matchesSearchCheck && matchesDateRangeCheck) {
+          if (task.Owner) availableOwners.add(task.Owner);
+          if (task.HelpAssignee) availableOwners.add(task.HelpAssignee);
+      }
+    }
+
+    // สร้าง Object ของ Options ที่กรองแล้ว
+    const calculatedOptions: AvailableOptions = {
+        owners: Array.from(availableOwners).sort(),
+        // กรองเฉพาะ Project ที่ยังอยู่ในรายการที่คำนวณได้
+        projects: projects.filter(p => availableProjectIds.has(p.ProjectID)),
+        statuses: Array.from(availableStatuses).sort(),
+    };
+
+    return { filteredTasks: finalFilteredTasks, options: calculatedOptions };
+
+  }, [allTasks, projects, selections]);
+
+  // [✅ เพิ่ม] Auto-Reset Logic
+  // หากตัวเลือกที่เคยเลือกไว้ หายไปจาก Options ใหม่ (เพราะถูกกรองออก)
+  // ควรรีเซ็ตค่านั้นเป็น null เพื่อป้องกันสภาวะที่กรองแล้วไม่เจออะไรเลย (Dead-end)
+  useEffect(() => {
+    let changed = false;
+    const newSelections = { ...selections };
+
+    if (selections.owner && !options.owners.includes(selections.owner)) {
+        newSelections.owner = null;
+        changed = true;
+    }
+    if (selections.projectId && !options.projects.some(p => p.ProjectID === selections.projectId)) {
+        newSelections.projectId = null;
+        changed = true;
+    }
+    if (selections.status && !options.statuses.includes(selections.status)) {
+        newSelections.status = null;
+        changed = true;
+    }
+
+    if (changed) {
+        // ตรวจสอบก่อน Set State เพื่อป้องกันการ Re-render ที่ไม่จำเป็น
+        if (JSON.stringify(newSelections) !== JSON.stringify(selections)) {
+           setSelections(newSelections);
         }
-      }
-      if (selections.endDate) {
-        if (!task.Deadline || task.Deadline > selections.endDate) {
-          return false;
-        }
-      }
-
-      // 5. Search Query Filter
-      if (query) {
-        const matchesTaskName = task.Task.toLowerCase().includes(query);
-        const matchesOwner = task.Owner?.toLowerCase().includes(query);
-        const matchesNotes = task['Notes / Result']?.toLowerCase().includes(query);
-
-        if (!matchesTaskName && !matchesOwner && !matchesNotes) {
-          return false;
-        }
-      }
-
-      return true; // Task ผ่านทุกตัวกรอง
-    });
-  }, [allTasks, selections]);
-
-  // const { options, filteredTasks } = useMemo(() => {
-  //   const { owner, projectId, status, searchQuery, startDate, endDate } = selections; // <-- ดึงค่าวันที่มาใช้
-  //   const query = searchQuery.toLowerCase().trim();
-
-  //   const projectIds = new Set<string>();
-  //   const statuses = new Set<string>();
-  //   const finalFilteredTasks: Task[] = [];
-
-  //   const matchesSearch = (task: Task): boolean => {
-  //       if (!query) return true;
-  //       const fieldsToSearch = [
-  //           task.Task,
-  //           task["Notes / Result"],
-  //           task.Owner,
-  //       ];
-  //       return fieldsToSearch.some(field =>
-  //           typeof field === 'string' && field.toLowerCase().includes(query)
-  //       );
-  //   };
-
-  //   for (const task of allTasks) {
-  //       const taskOwner = task.Owner || 'Unassigned';
-
-  //       const matchesOwner = !owner || taskOwner === owner || task.HelpAssignee === owner;
-  //       const matchesProject = !projectId || task.ProjectID === projectId;
-  //       const matchesStatus = !status || task.Status === status;
-  //       const matchesSearchCheck = matchesSearch(task);
-
-  //       // +++ START: เพิ่ม Logic การกรองตามช่วงวันที่ +++
-  //       const matchesDateRange = (() => {
-  //           if (!startDate && !endDate) return true; // ถ้าไม่ได้เลือกช่วงวันที่ ให้ผ่าน
-  //           if (!task.Deadline) return false; // Task ที่ไม่มี Deadline จะไม่ถูกแสดงเมื่อกรองด้วยวันที่
-
-  //           const taskDate = new Date(task.Deadline);
-  //           // ตั้งค่าเวลาเป็น 0 เพื่อเปรียบเทียบเฉพาะวันที่
-  //           taskDate.setHours(0, 0, 0, 0);
-
-  //           const start = startDate ? new Date(startDate) : null;
-  //           if (start) start.setHours(0, 0, 0, 0);
-
-  //           const end = endDate ? new Date(endDate) : null;
-  //           if (end) end.setHours(0, 0, 0, 0);
-
-  //           if (start && end) return taskDate >= start && taskDate <= end;
-  //           if (start) return taskDate >= start;
-  //           if (end) return taskDate <= end;
-  //           return true;
-  //       })();
-  //       // +++ END: เพิ่ม Logic การกรองตามช่วงวันที่ +++
-
-  //       // --- เพิ่ม matchesDateRange เข้าไปในเงื่อนไขสุดท้าย ---
-  //       if (matchesOwner && matchesProject && matchesStatus && matchesSearchCheck && matchesDateRange) {
-  //           finalFilteredTasks.push(task);
-  //       }
-
-  //       // --- Logic การสร้าง Options (ไม่มีการเปลี่ยนแปลง) ---
-  //       if (matchesOwner && matchesStatus && matchesSearchCheck && matchesDateRange) {
-  //           projectIds.add(task.ProjectID);
-  //       }
-  //       if (matchesOwner && matchesProject && matchesSearchCheck && matchesDateRange) {
-  //           if (task.Status) statuses.add(task.Status);
-  //       }
-  //   }
-
-  //   const calculatedOptions: AvailableOptions = {
-  //       owners: allOwnerOptions.sort(),
-  //       projects: projects.filter(p => projectIds.has(p.ProjectID)),
-  //       statuses: Array.from(statuses).sort(),
-  //   };
-
-  //   return { options: calculatedOptions, filteredTasks: finalFilteredTasks };
-
-  // }, [allTasks, projects, selections]);
-
-  // --- Auto-Reset Logic ---
-  // useEffect(() => {
-  //   let changed = false;
-  //   const newSelections = { ...selections };
-
-  //   if (selections.projectId && !options.projects.some(p => p.ProjectID === selections.projectId)) {
-  //       newSelections.projectId = null;
-  //       changed = true;
-  //   }
-  //   if (selections.status && !options.statuses.includes(selections.status)) {
-  //       newSelections.status = null;
-  //       changed = true;
-  //   }
-
-  //   if (changed) {
-  //       setSelections(newSelections);
-  //   }
-  // }, [options, selections]);
+    }
+  }, [options, selections]);
+  // ===================================================================
 
 
   const value = {

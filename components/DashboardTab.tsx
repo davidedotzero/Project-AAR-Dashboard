@@ -389,23 +389,27 @@ export const DashboardTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Bar */}
+      {/* [✅✅✅ Filter Bar - ส่วนที่แก้ไข] */}
       <div className="p-6 bg-white rounded-lg shadow-md border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
           <FilterDropdown
-            label="Owner (ทีม/ผู้รับผิดชอบ)"
+            // [✅ ปรับปรุงชื่อ]
+            label="Owner / Assignee (ผู้รับผิดชอบ/ผู้ช่วย)"
             value={selections.owner}
             options={options.owners}
             onChange={(val) => setFilter("owner", val)}
             disabled={isLoading}
           />
+          
+          {/* [✅ นำ Comment ออก] */}
           <FilterDropdown
             label="ชื่อโปรเจกต์"
             value={selections.projectId}
-            options={projects}
+            options={options.projects}
             onChange={(val) => setFilter("projectId", val)}
             disabled={isLoading}
           />
+          {/* [✅ นำ Comment ออก] */}
           <FilterDropdown
             label="Status (สถานะ)"
             value={selections.status}
@@ -413,7 +417,8 @@ export const DashboardTab: React.FC = () => {
             onChange={(val) => setFilter("status", val)}
             disabled={isLoading}
           />
-          {/* +++ START: เพิ่มช่องเลือกวันที่ +++ */}
+          
+          {/* [✅ นำ Comment ออก] */}
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 mb-2">วันที่เริ่มต้น (Deadline)</label>
             <input
@@ -424,6 +429,7 @@ export const DashboardTab: React.FC = () => {
               disabled={isLoading}
             />
           </div>
+          {/* [✅ นำ Comment ออก] */}
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 mb-2">วันที่สิ้นสุด (Deadline)</label>
             <input
@@ -434,7 +440,6 @@ export const DashboardTab: React.FC = () => {
               disabled={isLoading}
             />
           </div>
-          {/* +++ END: เพิ่มช่องเลือกวันที่ +++ */}
         </div>
         <div className="flex flex-col">
           <label className="text-sm font-medium text-gray-700 mb-2">
@@ -512,14 +517,41 @@ export const DashboardTab: React.FC = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {finalSortedTasks.map((task) => {
               const userCanEdit = canEditTask(user, task);
+
+              // [✅✅✅ New Logic] การตรวจสอบเพื่อเน้นสี Owner/Assignee
+              const activeOwnerFilter = selections.owner;
+              const isPrimaryOwner = task.Owner === activeOwnerFilter;
+              const isHelpAssignee = task.HelpAssignee === activeOwnerFilter;
+
+              // กำหนดสีสำหรับ Owner หลัก
+              let ownerTextColor = 'text-gray-900 font-medium'; // สี Default
+              if (activeOwnerFilter) {
+                  if (isPrimaryOwner) {
+                      // ถ้า Owner หลักตรงกับ Filter ให้เน้นสีส้มและตัวหนา
+                      ownerTextColor = 'text-orange-600 font-bold';
+                  } else if (isHelpAssignee) {
+                     // ถ้า Owner หลักไม่ตรง (เช่น WEB) แต่ Task นี้แสดงเพราะ HelpAssignee ตรง (เช่น MARKETING) ให้ใช้สีเทา
+                     ownerTextColor = 'text-gray-500 font-medium';
+                  }
+              }
+
               return (
                 <tr key={task._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDateToDDMMYYYY(task.Deadline)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {task.Owner || "-"}
+
+                  {/* [✅ Updated Cell] Owner Cell */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={ownerTextColor}>
+                        {task.Owner || "-"}
+                    </span>
+                    {/* แสดงข้อความเสริม ถ้า Task นี้แสดงเพราะ HelpAssignee */}
+                    {activeOwnerFilter && !isPrimaryOwner && isHelpAssignee && (
+                         <span title={`แสดงเนื่องจาก ${activeOwnerFilter} เป็นผู้ช่วยเหลือ (Help Assignee)`} className="ml-2 text-xs text-purple-500 italic">(Via Help)</span>
+                    )}
                   </td>
+
                   <td
                     className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-md"
                     title={task.Task}
@@ -538,9 +570,15 @@ export const DashboardTab: React.FC = () => {
                   >
                     {truncateText(task["Notes / Result"], 10)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-medium">
-                    {task.HelpAssignee || "-"}
+
+                   {/* [✅ Updated Cell] Help Assignee Cell */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                     {/* เน้นสีม่วงเข้มและขีดเส้นใต้ถ้าตรงกับ Filter */}
+                    <span className={isHelpAssignee && activeOwnerFilter ? 'text-purple-700 font-bold underline' : 'text-purple-700'}>
+                       {task.HelpAssignee || "-"}
+                    </span>
                   </td>
+
                   <td
                     className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs"
                     title={task.HelpDetails}
@@ -552,7 +590,6 @@ export const DashboardTab: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     {userCanEdit && (
-                      // <button onClick={() => openViewModal(task, finalSortedTasks)} className="text-indigo-600 hover:text-indigo-900 mr-3">View</button>
                       <button
                         onClick={() => openEditModal(task)}
                         className="text-orange-600 hover:text-orange-900"
