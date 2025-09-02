@@ -288,7 +288,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-white/70 bg-opacity-50 z-40 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div

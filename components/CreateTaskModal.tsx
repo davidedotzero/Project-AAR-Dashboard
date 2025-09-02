@@ -93,7 +93,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm ...";
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-center p-4">
+    <div className="fixed inset-0 bg-white/70 bg-opacity-50 z-40 flex justify-center items-center p-4">
       <div
         className="bg-white rounded-xl shadow-2xl w-full max-w-2xl"
         onClick={(e) => e.stopPropagation()}

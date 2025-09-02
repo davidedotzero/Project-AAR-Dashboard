@@ -155,7 +155,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const baseInputClass = "w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100";
 
 return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-center p-4" onClick={handleClose}>
+    <div className="fixed inset-0 bg-white/70 bg-opacity-50 z-40 flex justify-center items-center p-4" onClick={handleClose}>
       <div
         // [✅] ขยายความกว้างเป็น max-w-4xl
         className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
