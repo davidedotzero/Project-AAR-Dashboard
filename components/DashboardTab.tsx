@@ -837,10 +837,10 @@ export const DashboardTab: React.FC = () => {
                       {truncateText(task["Notes / Result"], 4)}
                     </td>
 
-                    <td className="px-4 py-3 sm:px-6 sm:py-4 max-w-xs"
+                    {/* <td className="px-4 py-3 sm:px-6 sm:py-4 max-w-xs"
                       title={task.AttachmentLink}>
                       {truncateText(task.AttachmentLink || "-", 4)}
-                    </td>
+                    </td> */}
 
                     <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm font-medium">
                       <span

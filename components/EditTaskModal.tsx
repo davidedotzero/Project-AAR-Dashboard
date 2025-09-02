@@ -485,17 +485,17 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                     </FormField>
                   </div>
 
-                  <div className="md:col-span-2">
+                  {/* <div className="md:col-span-2">
                     <FormField label="Attachment Link (ลิงก์แนบ)">
                       <input
-                        type="url"
+                        type="text"
                         name="AttachmentLink"
                         value={formData.AttachmentLink ?? ""} 
                         onChange={handleChange}
                         className={baseInputClass}
                       />
                     </FormField>
-                  </div>
+                  </div> */}
                 </div>
 
                 <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
