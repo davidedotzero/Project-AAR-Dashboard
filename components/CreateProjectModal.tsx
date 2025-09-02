@@ -196,7 +196,7 @@ return (
           </div>
 
            {/* [✅ ปรับปรุง Layout] Task List (Scrollable) */}
-          <div className="px-6 pt-2 pb-4 overflow-y-auto border-b flex-1">
+          <div className="px-6 pt-2 pb-4 overflow-y-auto border-b flex-1  min-h-0">
             <div className="space-y-2">
 
               {projectTasks.map((task) => {
