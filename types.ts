@@ -54,6 +54,14 @@ export interface Task {
   Attachment?: string | null;
 }
 
+export interface HistoryEntry {
+  Timestamp: string;
+  TaskID: string;
+  UserEmail: string;
+  Action: string;
+  Details: string;
+}
+
 // =================================================
 // Dashboard/Chart Types
 // =================================================

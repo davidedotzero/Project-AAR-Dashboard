@@ -195,7 +195,7 @@ const App = () => {
 
   // The conditional rendering happens here, BEFORE other hooks would have been called.
   if (!user) {
-    return <LoginScreen />;
+    return <LoginScreen />;  
   }
 
   // If the user exists, we render the main app content.

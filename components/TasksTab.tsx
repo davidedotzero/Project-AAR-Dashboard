@@ -2,15 +2,13 @@ import React, { useState, useMemo, useEffect } from "react";
 import type { Task } from "../types";
 import {
   statusColorMap,
-  // phaseColorMap, // ไม่ได้ใช้งาน
   ownerOptions,
   statusOptions,
 } from "@/constants";
 import { EditIcon, ViewIcon, DeleteIcon } from "@/components/icons";
-// import { DeadlineAlert } from "@/components/DeadlineAlert"; // ไม่ได้ใช้งาน
 import { useData } from "@/contexts/DataContext";
-import { useAuth } from "@/contexts/AuthContext"; // [✅ เพิ่ม]
-import { canEditTask } from "@/utils/authUtils"; // [✅ เพิ่ม]
+import { useAuth } from "@/contexts/AuthContext";
+import { canEditTask } from "@/utils/authUtils";
 import { useUI } from "@/contexts/UIContext";
 
 // Helper function to truncate text (เหมือนเดิม)
@@ -24,6 +22,36 @@ const truncateText = (
     return text;
   }
   return words.slice(0, wordLimit).join(" ") + "...";
+};
+// Helper Component สำหรับแสดง @mentions และ #tags
+const AssigneeLabels: React.FC<{ text: string | null | undefined }> = ({ text }) => {
+  if (!text) {
+    return <span>-</span>;
+  }
+  const parts = text.split(/([@#]\w+)/g).filter(part => part);
+  return (
+    <div className="flex flex-wrap gap-1">
+      {parts.map((part, index) => {
+        if (part.startsWith('@')) {
+          return (
+            <span key={index} className="px-2 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
+              {part}
+            </span>
+          );
+        }
+        if (part.startsWith('#')) {
+          return (
+            <span key={index} className="px-2 py-0.5 text-xs font-medium text-green-800 bg-green-100 rounded-full">
+              {part}
+            </span>
+          );
+        }
+        // ในกรณีที่เป็นข้อความธรรมดา อาจจะไม่ต้องแสดงผล หรือแสดงผลแบบปกติ
+        // return <span key={index}>{part}</span>;
+        return null;
+      })}
+    </div>
+  );
 };
 
 // Stat Card component for the summary - with tooltip
@@ -538,6 +566,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+            
             <tr>
               <th scope="col" className="p-4">
                 <div className="flex items-center">
@@ -578,6 +607,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
               <th scope="col" className="px-6 py-3 font-medium text-left">
                 Owner
               </th>
+              <th scope="col" className="px-6 py-3 font-medium text-left">Sub-Assignees</th> 
               <th scope="col" className="px-6 py-3 font-medium text-left">
                 Help Assignee
               </th>
@@ -645,6 +675,9 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                       {task.Owner}
                     </span>
                   </td>
+                  <td className="px-6 py-4 max-w-xs">
+                    <AssigneeLabels text={task['Feedback to Team']} />
+                  </td>
                   {/* [✅ แก้ไข] ใช้ Property โดยตรง */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-medium">
                     {task.HelpAssignee || "-"}
@@ -698,7 +731,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
             {filteredAndSortedTasks.length === 0 && (
               <tr>
                 <td colSpan={9} className="text-center py-10 text-gray-500">
-                  ไม่พบ Task ที่ตรงกับเกณฑ์
+                  กำลังอัปเดต Task ที่ตรงกับเกณฑ์
                 </td>
               </tr>
             )}

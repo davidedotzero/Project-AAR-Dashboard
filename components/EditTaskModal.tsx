@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import type { Task } from "../types";
+import type { Task, Project } from "../types";
 import {
   ownerOptions,
   statusOptions,
@@ -10,6 +10,37 @@ import {
 } from "../constants";
 import { FileUpload } from "./FileUpload";
 import { ArrowLeftIcon, ArrowRightIcon } from "./icons";
+
+// Helper Component สำหรับแสดง @mentions และ #tags
+const AssigneeLabels: React.FC<{ text: string | null | undefined }> = ({ text }) => {
+  if (!text) {
+    return <span>-</span>;
+  }
+  const parts = text.split(/([@#]\w+)/g).filter(part => part);
+  return (
+    <div className="flex flex-wrap gap-1">
+      {parts.map((part, index) => {
+        if (part.startsWith('@')) {
+          return (
+            <span key={index} className="px-2 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
+              {part}
+            </span>
+          );
+        }
+        if (part.startsWith('#')) {
+          return (
+            <span key={index} className="px-2 py-0.5 text-xs font-medium text-green-800 bg-green-100 rounded-full">
+              {part}
+            </span>
+          );
+        }
+        // ในกรณีที่เป็นข้อความธรรมดา อาจจะไม่ต้องแสดงผล หรือแสดงผลแบบปกติ
+        // return <span key={index}>{part}</span>;
+        return null;
+      })}
+    </div>
+  );
+};
 
 const DetailItem: React.FC<{ label: string; children: React.ReactNode }> = ({
   label,
@@ -72,57 +103,55 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
   const attachmentLink = task.AttachmentLink;
 
   return (
-    <div className="p-8 space-y-6">
-      {/* --- Main Task Details --- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6 pb-6 border-b">
-        <div className="md:col-span-3">
-          <DetailItem label="Task">
-            <p className="text-lg font-semibold">{task.Task}</p>
-          </DetailItem>
+    <div className="p-8 space-y-8">
+
+      {/* === Section: รายละเอียดหลัก === */}
+      <div className="pb-6 border-b">
+        <div className="md:col-span-2 mb-6">
+            <DetailItem label="Task">
+              <p className="text-xl font-bold text-gray-800">{task.Task || "-"}</p>
+            </DetailItem>
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            <DetailItem label="Phase">
+              <span
+                className={`px-2.5 py-1 text-sm font-semibold rounded-full ${
+                  phaseColorMap[task.Phase]?.bg
+                } ${phaseColorMap[task.Phase]?.text}`}
+              >
+                {task.Phase}
+              </span>
+            </DetailItem>
 
-        <DetailItem label="Phase">
-          <span
-            className={`px-2.5 py-1 text-sm font-semibold rounded-full ${
-              phaseColorMap[task.Phase]?.bg
-            } ${phaseColorMap[task.Phase]?.text}`}
-          >
-            {task.Phase}
-          </span>
-        </DetailItem>
+            <DetailItem label="Owner">
+              <span className="px-2.5 py-1 text-sm font-semibold text-orange-800 bg-orange-100 rounded-full">
+                {task.Owner}
+              </span>
+            </DetailItem>
 
-        <DetailItem label="Owner">
-          <span className="px-2.5 py-1 text-sm font-semibold text-orange-800 bg-orange-100 rounded-full">
-            {task.Owner}
-          </span>
-        </DetailItem>
+            <DetailItem label="Status">
+              <p className={`font-bold text-base ${statusColorMap[task.Status] || 'text-gray-500'}`}>
+                {task.Status}
+              </p>
+            </DetailItem>
 
-        <DetailItem label="Status">
-          <p
-            className={`font-bold ${
-              statusColorMap[task.Status]
-            } || 'text-gray-500'}`}
-          >
-            {task.Status}
-          </p>
-        </DetailItem>
+            <DetailItem label="Deadline">
+              <p className="text-base">{formatDateToDDMMYYYY(task.Deadline)}</p>
+            </DetailItem>
 
-        <DetailItem label="Deadline">
-          <p>{formatDateToDDMMYYYY(task.Deadline)}</p>
-        </DetailItem>
+            <DetailItem label="Est. Hours">
+              <p>{task["Est. Hours"] ?? "-"} ชั่วโมง</p>
+            </DetailItem>
 
-        <DetailItem label="Est. Hours">
-          <p>{task["Est. Hours"] ?? 0} ชั่วโมง</p>
-        </DetailItem>
-
-        <DetailItem label="Actual Hours">
-          <p>{task["Actual Hours"] ?? "N/A"} ชั่วโมง</p>
-        </DetailItem>
+            <DetailItem label="Actual Hours">
+              <p>{task["Actual Hours"] ?? "-"} ชั่วโมง</p>
+            </DetailItem>
+        </div>
       </div>
 
-      {/* --- Help Me Section (Conditional) --- */}
+      {/* === Section: Help Me (ถ้ามี) === */}
       {task.Status === "Help Me" && (
-        <div className="p-4 bg-purple-50 border-l-4 border-purple-400 rounded-r-lg">
+        <div className="p-5 bg-purple-50 border-l-4 border-purple-400 rounded-r-lg">
           <h4 className="text-md font-bold text-purple-800 mb-4">
             รายละเอียดการร้องขอความช่วยเหลือ
           </h4>
@@ -142,7 +171,7 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
             </DetailItem>
             <div className="md:col-span-3">
               <DetailItem label="รายละเอียด">
-                <p className="p-2 bg-purple-100 rounded-md border border-purple-200 min-h-[50px]">
+                <p className="p-3 bg-purple-100 rounded-md border border-purple-200 min-h-[50px] whitespace-pre-wrap">
                   {task.HelpDetails || "-"}
                 </p>
               </DetailItem>
@@ -151,27 +180,32 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
         </div>
       )}
 
-      {/* --- Notes & Feedback Section --- */}
+      {/* === Section: Feedback และผลลัพธ์ === */}
       <div className="grid grid-cols-1 gap-y-6">
+        {/* [✅ เพิ่ม] Field ผู้ปฏิบัติงาน */}
+        <DetailItem label="ผู้ปฏิบัติงาน (To Team)">
+           <AssigneeLabels text={task["Feedback to Team"]} />
+        </DetailItem>
+
         <DetailItem label="Notes / Result">
-          <p className="p-2 bg-gray-50 rounded-md border min-h-[50px]">
+          <p className="p-3 bg-gray-50 rounded-md border min-h-[60px] whitespace-pre-wrap">
             {task["Notes / Result"] || "-"}
           </p>
         </DetailItem>
+
         <DetailItem label="Attachment Link (ลิงก์แนบ)">
           {attachmentLink ? (
             <a
               href={attachmentLink}
               target="_blank"
               rel="noopener noreferrer"
-              // [✅ ปรับปรุง] เพิ่ม Style ให้ดูน่าสนใจขึ้น
-              className="flex items-center text-blue-600 hover:text-blue-800 hover:underline break-all p-2 bg-blue-50 rounded-md border border-blue-200"
+              className="flex items-center text-blue-600 hover:text-blue-800 hover:underline break-all p-3 bg-blue-50 rounded-md border border-blue-200"
             >
               <LinkIcon className="mr-2 flex-shrink-0" />
               <span>{attachmentLink}</span>
             </a>
           ) : (
-            <p className="p-2 bg-gray-50 rounded-md border">-</p>
+            <p className="p-3 bg-gray-50 rounded-md border">-</p>
           )}
         </DetailItem>
       </div>
@@ -426,6 +460,18 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                     </>
                   )}
                   {/* +++ END: Conditional "Help Me" Section +++ */}
+                  
+                  <div>
+                    <FormField label="ผู้ปฏิบัติงาน">
+                      <input
+                        type="text"
+                        name="Feedback to Team"
+                        value={formData["Feedback to Team"] ?? ""} 
+                        onChange={handleChange}
+                        className={baseInputClass}
+                        />
+                    </FormField>
+                  </div>
 
                   <div className="md:col-span-2">
                     <FormField label="Notes / Result">

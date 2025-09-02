@@ -8,7 +8,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import type { Project, Task, TasksByOwner, TasksByStatus } from "../types";
+import type { Project, Task, TasksByOwner, TasksByStatus,HistoryEntry } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { statusOptions, ownerOptions } from "../constants";
 import { useUI } from "./UIContext";
@@ -95,6 +95,10 @@ interface DataContextType {
   isLoadingAllTasks: boolean;
   isOperating: boolean; // สำหรับ Create/Update/Delete
   error: string | null;
+  
+  //History State
+  taskHistory: HistoryEntry[];
+  isLoadingHistory: boolean;
 
   // Derived Data
   // filteredTasks: Task[]; -- remove
@@ -131,6 +135,8 @@ interface DataContextType {
   ) => Promise<void>;
   confirmDelete: () => Promise<void>;
   refreshAllData: () => Promise<void>;
+  fetchTaskHistory: (taskId: string) => Promise<void>;
+  clearTaskHistory: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -158,8 +164,33 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   const [isLoadingAllTasks, setIsLoadingAllTasks] = useState(false);
   const [isOperating, setIsOperating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [taskHistory, setTaskHistory] = useState<HistoryEntry[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // --- Utility Functions & Constants ---
+  const fetchTaskHistory = useCallback(async (taskId: string) => {
+    if (!user) return;
+    setIsLoadingHistory(true);
+    setTaskHistory([]); // เคลียร์ของเก่าก่อนโหลด
+    try {
+      const data = await apiRequest<HistoryEntry[]>({
+        op: "getTaskHistory",
+        user: user,
+        payload: { taskId: taskId },
+      });
+      setTaskHistory(data);
+    } catch (err: any) {
+      console.error("Failed to fetch task history:", err);
+      setError(`ไม่สามารถโหลดประวัติ Task ได้: ${err.message}`);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [user]);
+
+  const clearTaskHistory = useCallback(() => {
+    setTaskHistory([]);
+  }, []);
+
   const phaseOrder = useMemo(
     () => [
       "Research & Planning",
@@ -873,6 +904,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     confirmDelete,
     refreshAllData,
     bulkUpdateDeadline,
+
+    taskHistory,
+    isLoadingHistory,
+    fetchTaskHistory,
+    clearTaskHistory,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
