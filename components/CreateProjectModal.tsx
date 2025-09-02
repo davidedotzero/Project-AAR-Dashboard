@@ -183,6 +183,31 @@ return (
                 </div>
             </div>
           </div>
+          {/* Add New Task Section */}
+          <div className="p-6 bg-gray-50 border-b">
+            <h3 className="text-sm font-semibold text-gray-800 mb-3">เพิ่ม Task ใหม่ (ถ้ามี)</h3>
+            <div className="flex items-end gap-3">
+                <div className="flex-grow">
+                    <label htmlFor="new-task-name" className="text-xs text-gray-600">ชื่อ Task</label>
+                    <input type="text" id="new-task-name" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} className={`${baseInputClass} text-sm`} placeholder="ชื่อ Task ใหม่..."/>
+                </div>
+                 {/* [✅ เพิ่ม] ช่อง Deadline สำหรับ Task ใหม่ */}
+                 <div className="w-36">
+                    <label htmlFor="new-task-deadline" className="text-xs text-gray-600">Deadline</label>
+                    <input type="date" id="new-task-deadline" value={newTaskDeadline} onChange={(e) => setNewTaskDeadline(e.target.value)} className={`${baseInputClass} text-sm`}/>
+                </div>
+                <div className="w-40">
+                    <label htmlFor="new-task-owner" className="text-xs text-gray-600">Owner</label>
+                    <select id="new-task-owner" value={newTaskOwner} onChange={(e) => setNewTaskOwner(e.target.value)} className={`${baseInputClass} text-sm`}>
+                        {ownerOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                </div>
+
+                <button type="button" onClick={handleAddTask} disabled={isLoading || !newTaskName.trim() || !newTaskDeadline} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-md hover:bg-gray-700 text-sm h-10 disabled:bg-gray-400">
+                    + เพิ่ม
+                </button>
+            </div>
+          </div>
 
           {/* Task Selection Header */}
           <div className="px-6 pb-2 border-t pt-4">
@@ -194,6 +219,7 @@ return (
                 <div className="col-span-3">Owner</div>
               </div>
           </div>
+          
 
            {/* [✅ ปรับปรุง Layout] Task List (Scrollable) */}
           <div className="px-6 pt-2 pb-4 overflow-y-auto border-b min-h-0 h-[calc(90vh-350px)]">
@@ -237,33 +263,10 @@ return (
                 )
               })}
             </div>
+            
           </div>
 
-          {/* Add New Task Section */}
-          <div className="p-6 bg-gray-50 border-b">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">เพิ่ม Task ใหม่ (ถ้ามี)</h3>
-            <div className="flex items-end gap-3">
-                <div className="flex-grow">
-                    <label htmlFor="new-task-name" className="text-xs text-gray-600">ชื่อ Task</label>
-                    <input type="text" id="new-task-name" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} className={`${baseInputClass} text-sm`} placeholder="ชื่อ Task ใหม่..."/>
-                </div>
-                 {/* [✅ เพิ่ม] ช่อง Deadline สำหรับ Task ใหม่ */}
-                 <div className="w-36">
-                    <label htmlFor="new-task-deadline" className="text-xs text-gray-600">Deadline</label>
-                    <input type="date" id="new-task-deadline" value={newTaskDeadline} onChange={(e) => setNewTaskDeadline(e.target.value)} className={`${baseInputClass} text-sm`}/>
-                </div>
-                <div className="w-40">
-                    <label htmlFor="new-task-owner" className="text-xs text-gray-600">Owner</label>
-                    <select id="new-task-owner" value={newTaskOwner} onChange={(e) => setNewTaskOwner(e.target.value)} className={`${baseInputClass} text-sm`}>
-                        {ownerOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
-                </div>
-
-                <button type="button" onClick={handleAddTask} disabled={isLoading || !newTaskName.trim() || !newTaskDeadline} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-md hover:bg-gray-700 text-sm h-10 disabled:bg-gray-400">
-                    + เพิ่ม
-                </button>
-            </div>
-          </div>
+          
 
          </fieldset> {/* ปิด fieldset */}
 
