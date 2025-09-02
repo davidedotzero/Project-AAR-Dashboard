@@ -163,7 +163,7 @@ export const DashboardTab: React.FC = () => {
     isLoading,
     filteredTasks, // These are the tasks filtered by the global dropdowns
   } = useGlobalFilters();
-  const { projects, refreshAllData, bulkUpdateTaskDeadlines } = useData();
+  const { projects, refreshAllData, bulkUpdateDeadline } = useData();
   const { openViewModal, openEditModal } = useUI();
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -375,8 +375,8 @@ export const DashboardTab: React.FC = () => {
     if (selectedTaskIds.size === 0 || !newDeadline || isBulkUpdating) return;
 
     // [✅ เพิ่มการตรวจสอบฟังก์ชัน]
-    if (!bulkUpdateTaskDeadlines) {
-        console.error("bulkUpdateTaskDeadlines function is not available in DataContext.");
+    if (!bulkUpdateDeadline) {
+        console.error("bulkUpdateDeadline function is not available in DataContext.");
         alert("ฟังก์ชันการอัปเดตจำนวนมากยังไม่พร้อมใช้งาน (ตรวจสอบ DataContext)");
         return;
     }
@@ -394,7 +394,7 @@ export const DashboardTab: React.FC = () => {
 
     setIsBulkUpdating(true);
     try {
-      await bulkUpdateTaskDeadlines(Array.from(selectedTaskIds), newDeadline);
+      await bulkUpdateDeadline(Array.from(selectedTaskIds), newDeadline);
       // Clear selection on success
       setSelectedTaskIds(new Set());
       setNewDeadline("");
