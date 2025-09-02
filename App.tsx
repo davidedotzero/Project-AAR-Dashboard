@@ -23,16 +23,16 @@ const LoadingIndicator: React.FC<{ message: string }> = ({ message }) => (
 );
 
 const ErrorDisplay: React.FC<{ message: string }> = ({ message }) => (
-    <div className="p-4 text-center text-red-700 bg-red-100 rounded-lg">
-        <p>
-            <strong>เกิดข้อผิดพลาด:</strong> {message}
-        </p>
-    </div>
+  <div className="p-4 text-center text-red-700 bg-red-100 rounded-lg">
+    <p>
+      <strong>เกิดข้อผิดพลาด:</strong> {message}
+    </p>
+  </div>
 );
 
 const AppContent = () => {
   // All data and UI hooks are called here, unconditionally.
-  const { 
+  const {
     activeTab,
     setActiveTab, // <-- Make sure setActiveTab is destructured
     isEditModalOpen,
@@ -54,12 +54,12 @@ const AppContent = () => {
     openCreateTaskModal,
     openEditProjectModal,
   } = useUI();
-  
-  const { 
+
+  const {
     projects,
     tasks,
     initialTasks,
-    loadingMessage, 
+    loadingMessage,
     error,
     selectedProjectId,
     setSelectedProjectId,
@@ -72,28 +72,32 @@ const AppContent = () => {
     bulkUpdateDeadline,
     isOperating,
   } = useData();
-  
+
   const { user } = useAuth();
 
   // Your existing renderContent logic
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardTab />;
+        return <DashboardTab onBulkUpdateDeadline={bulkUpdateDeadline} />;
       case "projects":
-        return <ProjectsTab 
-                    projects={projects} 
-                    onSelectProject={handleProjectSelect}
-                    onDeleteProject={(project) => openDeleteModal("project", project)}
-                />;
+        return (
+          <ProjectsTab
+            projects={projects}
+            onSelectProject={handleProjectSelect}
+            onDeleteProject={(project) => openDeleteModal("project", project)}
+          />
+        );
       case "tasks":
-        return <TasksTab 
-                    tasks={tasks}
-                    onEditTask={openEditModal}
-                    onTaskView={(task) => openViewModal(task, tasks)}
-                    onDeleteTask={(task) => openDeleteModal("task", task)}
-                    onBulkUpdateDeadline={bulkUpdateDeadline}
-                />;
+        return (
+          <TasksTab
+            tasks={tasks}
+            onEditTask={openEditModal}
+            onTaskView={(task) => openViewModal(task, tasks)}
+            onDeleteTask={(task) => openDeleteModal("task", task)}
+            onBulkUpdateDeadline={bulkUpdateDeadline}
+          />
+        );
       case "profile":
         return <ProfileTab />;
       default:
@@ -104,7 +108,7 @@ const AppContent = () => {
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans">
       {/* Pass all necessary props to the Header component */}
-      <Header 
+      <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         user={user}
@@ -117,12 +121,12 @@ const AppContent = () => {
         {loadingMessage ? (
           <LoadingIndicator message={loadingMessage} />
         ) : error ? (
-            <ErrorDisplay message={error} />
+          <ErrorDisplay message={error} />
         ) : (
           renderContent()
         )}
       </main>
-      
+
       {/* All Modals */}
       <CreateProjectModal
         isOpen={isCreateProjectModalOpen}
@@ -133,12 +137,12 @@ const AppContent = () => {
       />
       {isEditProjectModalOpen && currentEditingProject && (
         <EditProjectModal
-            isOpen={isEditProjectModalOpen}
-            onClose={closeModals}
-            onUpdate={updateProject}
-            onDeleteInitiate={(project) => openDeleteModal("project", project)}
-            isLoading={!!loadingMessage}
-            project={currentEditingProject}
+          isOpen={isEditProjectModalOpen}
+          onClose={closeModals}
+          onUpdate={updateProject}
+          onDeleteInitiate={(project) => openDeleteModal("project", project)}
+          isLoading={!!loadingMessage}
+          project={currentEditingProject}
         />
       )}
       <CreateTaskModal
@@ -200,4 +204,3 @@ const App = () => {
 };
 
 export default App;
-

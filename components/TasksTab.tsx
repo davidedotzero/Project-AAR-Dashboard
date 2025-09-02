@@ -126,7 +126,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [newDeadline, setNewDeadline] = useState<string>("");
 
-  const { refreshAllData, selectedProjectId  } = useData();
+  const { refreshAllData, selectedProjectId } = useData();
 
   const handleStatFilterClick = (filterType: string) => {
     setActiveStatFilter((prev) => (prev === filterType ? null : filterType));
@@ -141,7 +141,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     helpMe: "งานที่ทีมกำลังร้องขอความช่วยเหลือ",
   };
 
- const formatDateToDDMMYYYY = (
+  const formatDateToDDMMYYYY = (
     dateString: string | null | undefined
   ): string => {
     if (!dateString) return "N/A";
@@ -151,7 +151,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     }
     return "N/A";
   };
-//ฟังก์ชันสำหรับคำนวณ ต้องเป็น YYYY-MM-DD
+  //ฟังก์ชันสำหรับคำนวณ ต้องเป็น YYYY-MM-DD
   const getTodayYYYYMMDD = () => {
     const date = new Date();
     const day = String(date.getDate()).padStart(2, "0");
@@ -160,7 +160,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     return `${year}-${month}-${day}`;
   };
 
-const getWarningDateYYYYMMDD = (daysAhead: number) => {
+  const getWarningDateYYYYMMDD = (daysAhead: number) => {
     const date = new Date();
     date.setDate(date.getDate() + daysAhead);
     const year = date.getFullYear();
@@ -425,14 +425,15 @@ const getWarningDateYYYYMMDD = (daysAhead: number) => {
           <h3 className="text-md font-bold text-gray-700">
             ตัวกรองและเครื่องมือ
           </h3>
-          {selectedProjectId && selectedProjectId !== 'ALL' ?  (
-          <button
-            onClick={openCreateTaskModal}
-            className="bg-orange-500 hover:bg-orange-600 text-white font-bold flex px-4 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-          >
-            <PlusIcon className="w-4 h-4" />
-            <span>เพิ่ม Task</span>
-          </button>)  : (
+          {selectedProjectId && selectedProjectId !== "ALL" ? (
+            <button
+              onClick={openCreateTaskModal}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold flex px-4 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              <PlusIcon className="w-4 h-4" />
+              <span>เพิ่ม Task</span>
+            </button>
+          ) : (
             <div className="text-sm text-gray-500 italic">
               (เลือกโปรเจกต์เพื่อเพิ่ม Task)
             </div>
@@ -663,6 +664,13 @@ const getWarningDateYYYYMMDD = (daysAhead: number) => {
                   </td>
                   <td className="px-4 py-4 text-center">
                     <div className="flex items-center justify-center space-x-1">
+                      <button
+                        onClick={() => onTaskView(task)}
+                        className="text-gray-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-100"
+                        aria-label="View Task Details"
+                      >
+                        <ViewIcon />
+                      </button>
                       {/* [✅ แก้ไข] แสดงปุ่มเมื่อมีสิทธิ์เท่านั้น */}
                       {userCanEdit && (
                         <>

@@ -166,9 +166,9 @@ return (
           <button onClick={handleClose} disabled={isLoading} className="text-gray-400 hover:text-gray-600 disabled:opacity-30">&times;</button>
         </header>
 
-        <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden">
+        <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden min-h-0">
          {/* [✅] ใช้ fieldset เพื่อ Disable ฟอร์มทั้งหมดขณะโหลด */}
-         <fieldset disabled={isLoading} className="flex flex-col overflow-hidden">
+         <fieldset disabled={isLoading} className="grid grid-rows-[auto_1fr_auto] overflow-hidden flex-1">
 
           {/* Project Details Section */}
           <div className="p-6 space-y-4">
@@ -196,7 +196,7 @@ return (
           </div>
 
            {/* [✅ ปรับปรุง Layout] Task List (Scrollable) */}
-          <div className="px-6 pt-2 pb-4 overflow-y-auto border-b flex-1  min-h-0">
+          <div className="px-6 pt-2 pb-4 overflow-y-auto border-b min-h-0 h-[calc(90vh-350px)]">
             <div className="space-y-2">
 
               {projectTasks.map((task) => {
