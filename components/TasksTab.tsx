@@ -607,7 +607,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
               <th scope="col" className="px-6 py-3 font-medium text-left">
                 Owner
               </th>
-              <th scope="col" className="px-6 py-3 font-medium text-left">Sub-Assignees</th> 
+              <th scope="col" className="px-6 py-3 font-medium text-left">To Team</th> 
               <th scope="col" className="px-6 py-3 font-medium text-left">
                 Help Assignee
               </th>

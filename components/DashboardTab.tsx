@@ -17,6 +17,36 @@ const truncateText = (text: string, wordLimit: number): string => {
   }
   return words.slice(0, wordLimit).join(" ") + "...";
 };
+// Helper Component สำหรับแสดง @mentions และ #tags
+const AssigneeLabels: React.FC<{ text: string | null | undefined }> = ({ text }) => {
+  if (!text) {
+    return <span>-</span>;
+  }
+  const parts = text.split(/([@#]\w+)/g).filter(part => part);
+  return (
+    <div className="flex flex-wrap gap-1">
+      {parts.map((part, index) => {
+        if (part.startsWith('@')) {
+          return (
+            <span key={index} className="px-2 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
+              {part}
+            </span>
+          );
+        }
+        if (part.startsWith('#')) {
+          return (
+            <span key={index} className="px-2 py-0.5 text-xs font-medium text-green-800 bg-green-100 rounded-full">
+              {part}
+            </span>
+          );
+        }
+        // ในกรณีที่เป็นข้อความธรรมดา อาจจะไม่ต้องแสดงผล หรือแสดงผลแบบปกติ
+        // return <span key={index}>{part}</span>;
+        return null;
+      })}
+    </div>
+  );
+};
 
 const FilterDropdown: React.FC<{
   label: string;
@@ -164,7 +194,7 @@ export const DashboardTab: React.FC = () => {
     filteredTasks, // These are the tasks filtered by the global dropdowns
   } = useGlobalFilters();
   const { projects, refreshAllData, bulkUpdateDeadline } = useData();
-  const { openViewModal, openEditModal } = useUI();
+  const { onTaskView, openEditModal } = useUI();
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -499,7 +529,7 @@ export const DashboardTab: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
           <FilterDropdown
             // [✅ ปรับปรุงชื่อ]
-            label="Owner / Assignee (ผู้รับผิดชอบ/ผู้ช่วย)"
+            label="ผู้รับผิดชอบ/ผู้ช่วย"
             value={selections.owner}
             options={options.owners}
             onChange={(val) => setFilter("owner", val)}
@@ -516,7 +546,7 @@ export const DashboardTab: React.FC = () => {
           />
           {/* [✅ นำ Comment ออก] */}
           <FilterDropdown
-            label="Status (สถานะ)"
+            label="สถานะ"
             value={selections.status}
             options={options.statuses}
             onChange={(val) => setFilter("status", val)}
@@ -525,7 +555,7 @@ export const DashboardTab: React.FC = () => {
           
           {/* [✅ นำ Comment ออก] */}
           <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-2">วันที่เริ่มต้น (Deadline)</label>
+            <label className="text-sm font-medium text-gray-700 mb-2">กรองกำหนดเริ่มต้น</label>
             <input
               type="date"
               value={selections.startDate || ''}
@@ -536,7 +566,7 @@ export const DashboardTab: React.FC = () => {
           </div>
           {/* [✅ นำ Comment ออก] */}
           <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-2">วันที่สิ้นสุด (Deadline)</label>
+            <label className="text-sm font-medium text-gray-700 mb-2">กรองกำหนดสิ้นสุด</label>
             <input
               type="date"
               value={selections.endDate || ''}
@@ -548,11 +578,11 @@ export const DashboardTab: React.FC = () => {
         </div>
         <div className="flex flex-col">
           <label className="text-sm font-medium text-gray-700 mb-2">
-            Action (ค้นหา Task/Notes)
+            ค้นหา หัวข้อ/รายละเอียด
           </label>
           <input
             type="text"
-            placeholder="ค้นหางาน, Owner, หรือ Notes..."
+            placeholder="ค้นหา หัวข้อ/รายละเอียด หรือ ทีมที่รับผิดชอบ"
             value={selections.searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50"
@@ -665,30 +695,31 @@ export const DashboardTab: React.FC = () => {
                   onClick={handleSortByDeadline}
                   className="flex items-center space-x-1 hover:text-gray-800 transition-colors"
                 >
-                  <span>Deadline</span>
+                  <span>กำหนดส่ง</span>
                   <SortIcon direction={sortOrder} />
                 </button>
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Owner
+                ทีมที่รับผิดชอบ
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Action (Task)
+                หัวข้อ
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Operation (Project)
+                โปรเจกต์
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ผู้ปฏิบัติงาน</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                รายละเอียด
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Note
+                ทีมที่ร้องขอความช่วยเหลือ
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Help Assignee
+                รายละเอียดการร้องขอ
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Help Details
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
+                สถานะ
               </th>
               <th className="px-6 py-3"></th>
             </tr>
@@ -716,7 +747,7 @@ export const DashboardTab: React.FC = () => {
               }
 
               return (
-                <tr key={task._id} className="hover:bg-gray-50">
+                <tr key={task._id}className="hover:bg-gray-50">
                   <td className="w-4 p-4">
                     {userCanEdit ? (
                       <div className="flex items-center">
@@ -771,13 +802,15 @@ export const DashboardTab: React.FC = () => {
                   >
                     {getProjectName(task.ProjectID)}
                   </td>
+                  <td className="px-6 py-4 max-w-xs">
+                    <AssigneeLabels text={task['Feedback to Team']} />
+                  </td>
                   <td
                     className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm"
                     title={task["Notes / Result"]}
                   >
                     {truncateText(task["Notes / Result"], 10)}
                   </td>
-
                    {/* [✅ Updated Cell] Help Assignee Cell */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                      {/* เน้นสีม่วงเข้มและขีดเส้นใต้ถ้าตรงกับ Filter */}

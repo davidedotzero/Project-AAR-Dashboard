@@ -1,1 +1,16 @@
 @import "tailwindcss";
+
+@media (max-width: 767px) {
+  /* จัดการให้ td แสดง label ที่ดึงมาจาก data-label */
+  tbody td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 600; /* semi-bold */
+    margin-right: 0.5rem; /* mr-2 */
+    float: left;
+  }
+  
+  /* ยกเว้น td แรก (checkbox) ไม่ต้องมี label */
+  tbody td[data-label="Select"]::before {
+    content: none;
+  }
+}
