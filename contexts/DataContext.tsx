@@ -690,6 +690,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     totalImpactDelivered,
     workInProgressCount,
     overdueTaskCount,
+    bulkUpdateDeadline,
   } = useMemo(() => {
 
     const getTodayYYYYMMDD = () => {
