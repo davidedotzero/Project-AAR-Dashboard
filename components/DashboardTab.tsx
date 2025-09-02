@@ -677,7 +677,6 @@ export const DashboardTab: React.FC = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              {/* [✅ New Column: Checkbox Header] */}
               <th scope="col" className="p-4 w-4">
                 <div className="flex items-center">
                   <input
@@ -685,13 +684,11 @@ export const DashboardTab: React.FC = () => {
                     type="checkbox"
                     checked={isAllSelected}
                     onChange={handleSelectAll}
-                    // จัดการ Indeterminate state โดยใช้ Callback Ref
                     ref={(input) => {
                       if (input) {
                         input.indeterminate = isPartialSelected;
                       }
                     }}
-                    // Disable ถ้าไม่มี Task ที่แก้ไขได้เลย
                     disabled={editableTasksInView.length === 0}
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 disabled:opacity-50 cursor-pointer"
                     title={
@@ -708,8 +705,7 @@ export const DashboardTab: React.FC = () => {
                   </label>
                 </div>
               </th>
-              {/* [✅ End Checkbox Header] */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <button
                   onClick={handleSortByDeadline}
                   className="flex items-center space-x-1 hover:text-gray-800 transition-colors"
@@ -718,31 +714,34 @@ export const DashboardTab: React.FC = () => {
                   <SortIcon direction={sortOrder} />
                 </button>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 ทีมที่รับผิดชอบ
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 หัวข้อ
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 โปรเจกต์
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 ผู้ปฏิบัติงาน
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 รายละเอียด
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                ลิงก์งาน
+              </th>
+              <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 ทีมที่ร้องขอความช่วยเหลือ
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 รายละเอียดการร้องขอ
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 สถานะ
               </th>
-              <th className="px-6 py-3"></th>
+              <th className="px-4 py-2 sm:px-6 sm:py-3"></th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -750,19 +749,15 @@ export const DashboardTab: React.FC = () => {
               const userCanEdit = canEditTask(user, task);
               const isSelected = selectedTaskIds.has(task._id);
 
-              // [✅✅✅ New Logic] การตรวจสอบเพื่อเน้นสี Owner/Assignee
               const activeOwnerFilter = selections.owner;
               const isPrimaryOwner = task.Owner === activeOwnerFilter;
               const isHelpAssignee = task.HelpAssignee === activeOwnerFilter;
 
-              // กำหนดสีสำหรับ Owner หลัก
-              let ownerTextColor = "text-gray-900 font-medium"; // สี Default
+              let ownerTextColor = "text-gray-900 font-medium";
               if (activeOwnerFilter) {
                 if (isPrimaryOwner) {
-                  // ถ้า Owner หลักตรงกับ Filter ให้เน้นสีส้มและตัวหนา
                   ownerTextColor = "text-orange-600 font-bold";
                 } else if (isHelpAssignee) {
-                  // ถ้า Owner หลักไม่ตรง (เช่น WEB) แต่ Task นี้แสดงเพราะ HelpAssignee ตรง (เช่น MARKETING) ให้ใช้สีเทา
                   ownerTextColor = "text-gray-500 font-medium";
                 }
               }
@@ -775,7 +770,8 @@ export const DashboardTab: React.FC = () => {
                   >
                     <td className="w-4 p-4">
                       {userCanEdit ? (
-                        <div className="flex items-center">
+                        <div className="flex items-center"
+                        onClick={(e) => e.stopPropagation()}>
                           <input
                             id={`checkbox-table-dashboard-${task._id}`}
                             type="checkbox"
@@ -791,25 +787,21 @@ export const DashboardTab: React.FC = () => {
                           </label>
                         </div>
                       ) : (
-                        // แสดงช่องว่างถ้าแก้ไขไม่ได้
                         <div
                           className="w-4 h-4"
                           title="คุณไม่มีสิทธิ์แก้ไข Task นี้"
                         ></div>
                       )}
                     </td>
-                    {/* [✅ End Checkbox Cell] */}
 
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDateToDDMMYYYY(task.Deadline)}
                     </td>
 
-                    {/* [✅ Updated Cell] Owner Cell */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm">
                       <span className={ownerTextColor}>
                         {task.Owner || "-"}
                       </span>
-                      {/* แสดงข้อความเสริม ถ้า Task นี้แสดงเพราะ HelpAssignee */}
                       {activeOwnerFilter &&
                         !isPrimaryOwner &&
                         isHelpAssignee && (
@@ -823,29 +815,33 @@ export const DashboardTab: React.FC = () => {
                     </td>
 
                     <td
-                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-md"
+                      className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs sm:max-w-md"
                       title={task.Task}
                     >
                       {task.Task}
                     </td>
                     <td
-                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm"
+                      className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs sm:max-w-sm"
                       title={getProjectName(task.ProjectID)}
                     >
                       {getProjectName(task.ProjectID)}
                     </td>
-                    <td className="px-6 py-4 max-w-xs">
+                    <td className="px-4 py-3 sm:px-6 sm:py-4 max-w-xs">
                       <AssigneeLabels text={task["Feedback to Team"]} />
                     </td>
+                    
                     <td
-                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-sm"
+                      className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs sm:max-w-sm"
                       title={task["Notes / Result"]}
                     >
-                      {truncateText(task["Notes / Result"], 10)}
+                      {truncateText(task["Notes / Result"], 4)}
                     </td>
-                    {/* [✅ Updated Cell] Help Assignee Cell */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {/* เน้นสีม่วงเข้มและขีดเส้นใต้ถ้าตรงกับ Filter */}
+
+                    <td className="px-4 py-3 sm:px-6 sm:py-4 max-w-xs">
+                      {task.AttachmentLink || "-"}
+                    </td>
+
+                    <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm font-medium">
                       <span
                         className={
                           isHelpAssignee && activeOwnerFilter
@@ -858,15 +854,15 @@ export const DashboardTab: React.FC = () => {
                     </td>
 
                     <td
-                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs"
+                      className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs"
                       title={task.HelpDetails}
                     >
                       {truncateText(task.HelpDetails, 10)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm text-gray-500">
                       {task.Status}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-right text-sm font-medium">
                       {userCanEdit && (
                         <button
                           onClick={() => openEditModal(task)}
