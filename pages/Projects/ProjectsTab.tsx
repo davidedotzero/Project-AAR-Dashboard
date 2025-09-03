@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from "react";
-import type { Project } from "../types";
-import { DeleteIcon, EditIcon } from "./icons";
-import { useUI } from '../contexts/UIContext';
-import { useAuth } from '../contexts/AuthContext'; // [✅ เพิ่ม]
-import { isAdmin } from '../utils/authUtils'; // [✅ เพิ่ม]
+import type { Project } from "@/types";
+import { DeleteIcon, EditIcon } from "@/components/icons";
+import { useUI } from '@/contexts/UIContext';
+import { useAuth } from '@/contexts/AuthContext'; // [✅ เพิ่ม]
+import { isAdmin } from '@/utils/authUtils'; // [✅ เพิ่ม]
 
 interface ProjectsTabProps {
   projects: Project[];

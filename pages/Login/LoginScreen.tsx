@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const GoogleIcon = () => (
     <svg viewBox="0 0 48 48" width="24px" height="24px">

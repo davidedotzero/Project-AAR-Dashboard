@@ -15,7 +15,7 @@ import {
   PieProps,
 } from "recharts";
 // โปรดตรวจสอบ Path การ Import ให้ถูกต้อง
-import { StatCard } from "../StatCard";
+import { StatCard } from "@/components/StatCard";
 import type { TasksByOwner, TasksByStatus } from "@/types";
 import { PIE_COLORS } from "@/constants";
 

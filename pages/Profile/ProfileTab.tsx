@@ -1,8 +1,8 @@
 import React from 'react';
 // โปรดตรวจสอบ Path การ Import ให้ถูกต้องตามโครงสร้างโปรเจกต์ของคุณ
-import { useAuth } from '../contexts/AuthContext';
-import { useData } from '../contexts/DataContext';
-import { PerformanceDashboard } from '../components/tabs/PerformanceDashboard';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
+import { PerformanceDashboard } from '@/pages/Dashboard/PerformanceDashboard';
 
 // Icons (เหมือนเดิม)
 const UserIcon = () => (
