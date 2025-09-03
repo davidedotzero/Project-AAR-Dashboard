@@ -3,10 +3,10 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useGlobalFilters } from "@/components/GlobalFilterContext";
 import { useData } from "@/contexts/DataContext";
 import { useUI } from "@/contexts/UIContext";
-import { Project, Task } from "../types";
+import { Project, Task } from "@/types";
 import { useAuth } from "@/contexts/AuthContext"; // [✅ เพิ่ม]
 import { canEditTask } from "@/utils/authUtils"; // [✅ เพิ่ม]
-import { ViewIcon } from "./icons";
+// import { ViewIcon } from "./icons";
 
 // --- Helper Component: FilterDropdown ---
 const truncateText = (text: string, wordLimit: number): string => {
@@ -729,9 +729,9 @@ export const DashboardTab: React.FC = () => {
               <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 รายละเอียด
               </th>
-              <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              {/* <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 ลิงก์งาน
-              </th>
+              </th> */}
               <th className="px-4 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 ทีมที่ร้องขอความช่วยเหลือ
               </th>
