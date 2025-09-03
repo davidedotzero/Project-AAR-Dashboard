@@ -1,10 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import type { Task } from "../types";
-import {
-  statusColorMap,
-  ownerOptions,
-  statusOptions,
-} from "@/constants";
+import { statusColorMap, ownerOptions, statusOptions } from "@/constants";
 import { EditIcon, ViewIcon, DeleteIcon } from "@/components/icons";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,24 +20,32 @@ const truncateText = (
   return words.slice(0, wordLimit).join(" ") + "...";
 };
 // Helper Component สำหรับแสดง @mentions และ #tags
-const AssigneeLabels: React.FC<{ text: string | null | undefined }> = ({ text }) => {
+const AssigneeLabels: React.FC<{ text: string | null | undefined }> = ({
+  text,
+}) => {
   if (!text) {
     return <span>-</span>;
   }
-  const parts = text.split(/([@#]\w+)/g).filter(part => part);
+  const parts = text.split(/([@#]\w+)/g).filter((part) => part);
   return (
     <div className="flex flex-wrap gap-1">
       {parts.map((part, index) => {
-        if (part.startsWith('@')) {
+        if (part.startsWith("@")) {
           return (
-            <span key={index} className="px-2 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
+            <span
+              key={index}
+              className="px-2 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full"
+            >
               {part}
             </span>
           );
         }
-        if (part.startsWith('#')) {
+        if (part.startsWith("#")) {
           return (
-            <span key={index} className="px-2 py-0.5 text-xs font-medium text-green-800 bg-green-100 rounded-full">
+            <span
+              key={index}
+              className="px-2 py-0.5 text-xs font-medium text-green-800 bg-green-100 rounded-full"
+            >
               {part}
             </span>
           );
@@ -456,10 +460,11 @@ export const TasksTab: React.FC<TasksTabProps> = ({
           {selectedProjectId && selectedProjectId !== "ALL" ? (
             <button
               onClick={openCreateTaskModal}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-bold flex px-4 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              className="flex items-center px-4 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors
+              duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
               <PlusIcon className="w-4 h-4" />
-              <span>เพิ่ม Task</span>
+              <span className="ml-2">เพิ่ม Task</span>
             </button>
           ) : (
             <div className="text-sm text-gray-500 italic">
@@ -566,7 +571,6 @@ export const TasksTab: React.FC<TasksTabProps> = ({
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-            
             <tr>
               <th scope="col" className="p-4">
                 <div className="flex items-center">
@@ -607,7 +611,9 @@ export const TasksTab: React.FC<TasksTabProps> = ({
               <th scope="col" className="px-6 py-3 font-medium text-left">
                 Owner
               </th>
-              <th scope="col" className="px-6 py-3 font-medium text-left">To Team</th> 
+              <th scope="col" className="px-6 py-3 font-medium text-left">
+                To Team
+              </th>
               <th scope="col" className="px-6 py-3 font-medium text-left">
                 Help Assignee
               </th>
@@ -676,7 +682,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                     </span>
                   </td>
                   <td className="px-6 py-4 max-w-xs">
-                    <AssigneeLabels text={task['Feedback to Team']} />
+                    <AssigneeLabels text={task["Feedback to Team"]} />
                   </td>
                   {/* [✅ แก้ไข] ใช้ Property โดยตรง */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-medium">
