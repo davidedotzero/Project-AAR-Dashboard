@@ -817,7 +817,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     isLoadingProjects,
     isLoadingTasks,
     isLoadingAllTasks,
-isOperating,
+    isOperating,
     error,
 
     // Derived Data

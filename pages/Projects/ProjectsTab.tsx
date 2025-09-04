@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Project } from "@/types";
-import { DeleteIcon, EditIcon } from "@/components/icons";
+import { DeleteIcon, EditIcon, MenuIcon } from "@/components/icons";
 import { useUI } from '@/contexts/UIContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { isAdmin } from '@/utils/authUtils';
@@ -28,7 +28,12 @@ interface ProjectsTabProps {
   onDeleteProject: (project: Project) => void;
 }
 
-const ProjectCard = ({ project, onDeleteProject }: { project: Project, onDeleteProject: (project: Project) => void }) => {
+interface ProjectCardProps {
+  project: Project;
+  onDeleteProject: (project: Project) => void;
+}
+
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDeleteProject }) => {
   const { openEditProjectModal } = useUI();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -46,34 +51,31 @@ const ProjectCard = ({ project, onDeleteProject }: { project: Project, onDeleteP
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500 hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-      onClick={() => navigate(`/tasks/${project.Name}`)}
+      className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500 hover:shadow-lg transition-shadow duration-300"
     >
       <div className="flex justify-between items-start">
-        <h3 className="font-bold text-lg text-gray-800 flex-1 pr-4">
+        <h3 className="font-bold text-lg text-gray-800 flex-1 pr-4 cursor-pointer" onClick={() => navigate(`/tasks/${project.Name}`)}>
           {project.Name}
         </h3>
+        {userIsAdmin && (
+            <button {...listeners} className="cursor-grab p-2 text-gray-400 hover:text-gray-600">
+                <MenuIcon />
+            </button>
+        )}
       </div>
       <div className="flex items-center justify-between mt-4">
         <p className="text-sm text-gray-500 font-mono">{project.ProjectID}</p>
         {userIsAdmin && (
           <div className="flex items-center space-x-1">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                openEditProjectModal(project);
-              }}
+              onClick={() => openEditProjectModal(project)}
               className="text-gray-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-100"
               aria-label="Edit Project"
             >
               <EditIcon />
             </button>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteProject(project);
-              }}
+              onClick={() => onDeleteProject(project)}
               className="text-gray-500 hover:text-red-600 p-2 rounded-full hover:bg-red-100"
               aria-label="Delete Project"
             >
