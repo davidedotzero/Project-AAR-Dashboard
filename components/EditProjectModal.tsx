@@ -31,6 +31,7 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
 }) => {
   const [projectName, setProjectName] = useState("");
   const [priority, setPriority] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
 
   // Initialize form state
   useEffect(() => {
@@ -42,7 +43,7 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
     }
   }, [isOpen, project]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const trimmedName = projectName.trim();
@@ -51,7 +52,14 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
     // ใช้ 99 เป็นค่า Default ถ้าว่าง (หมายถึงไม่ได้กำหนด)
     const numPriority = parsePriorityInput(priority, 99);
 
-    onUpdate(project.ProjectID, { Name: trimmedName, Priority: numPriority });
+    setIsSaving(true);
+    try {
+      await onUpdate(project.ProjectID, { Name: trimmedName, Priority: numPriority });
+    } catch (error) {
+      console.error("Failed to update project:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteClick = () => {
@@ -136,9 +144,9 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
                 <button
                     type="submit"
                     className="px-4 py-2 bg-orange-500 text-white font-medium rounded-md shadow-sm hover:bg-orange-600 disabled:opacity-50"
-                    disabled={isLoading || !projectName.trim()}
+                    disabled={isLoading || isSaving || !projectName.trim()}
                 >
-                    {isLoading ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
+                    {isLoading || isSaving ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
                 </button>
             </div>
           </div>

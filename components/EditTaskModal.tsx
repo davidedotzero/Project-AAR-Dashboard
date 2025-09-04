@@ -250,6 +250,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<Task | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -298,13 +299,21 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading) return; // ป้องกันการ Submit ซ้ำ
+    if (isSaving || isLoading) return;
 
     if (formData) {
-      onSave(formData);
-      setIsEditing(false); // Return to view mode after saving
+      setIsSaving(true);
+      try {
+        await onSave(formData);
+        setIsEditing(false); // Return to view mode after successful save
+      } catch (error) {
+        // Error is already handled in DataContext, but you could add specific UI feedback here if needed
+        console.error("Failed to save task:", error);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -555,10 +564,10 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 <button
                   type="button" // Should be type="button" to not submit the form directly
                   onClick={handleSubmit} // We call handleSubmit manually
-                  disabled={isLoading}
+                  disabled={isLoading || isSaving}
                   className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'กำลังบันทึก...' : 'บันทึก'}
+                  {isLoading || isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
                 </button>
               </>
             )}

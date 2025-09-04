@@ -112,7 +112,7 @@ const AppContent = () => {
           onClose={closeModals}
           onUpdate={updateProject}
           onDeleteInitiate={(project) => openDeleteModal("project", project)}
-          isLoading={!!loadingMessage}
+          isLoading={isOperating}
           project={currentEditingProject}
         />
       )}

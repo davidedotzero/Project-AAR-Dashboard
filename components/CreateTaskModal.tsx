@@ -51,6 +51,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   isLoading,
 }) => {
   const [formData, setFormData] = useState<NewTaskData>({});
+  const [isCreating, setIsCreating] = useState(false);
 
   // ตั้งค่าเริ่มต้นให้ฟอร์มเมื่อ Modal ถูกเปิด
   useEffect(() => {
@@ -83,10 +84,17 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     setFormData((prev) => ({ ...prev, [name]: processedValue }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading || !formData.Task) return;
-    onCreate(formData);
+    if (isCreating || isLoading || !formData.Task) return;
+    setIsCreating(true);
+    try {
+      await onCreate(formData);
+    } catch (error) {
+      console.error("Failed to create task:", error);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const baseInputClass =
@@ -181,10 +189,10 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isCreating}
               className="ml-3 px-4 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
-              {isLoading ? "กำลังสร้าง..." : "สร้าง Task"}
+              {isLoading || isCreating ? "กำลังสร้าง..." : "สร้าง Task"}
             </button>
           </footer>
         </form>
