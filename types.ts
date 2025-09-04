@@ -21,6 +21,7 @@ export interface Project {
   ProjectID: string;
   Name: string;
   Priority: number;
+  frameworkDetails?: string;
 }
 
 /**

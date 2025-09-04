@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 import { statusOptions, ownerOptions } from "../constants";
 import { useUI } from "./UIContext";
 import { useAuth } from "./AuthContext";
-import { apiRequest } from "@/services/api";
+import { apiRequest } from "@/services/apiCore";
 
 
 
@@ -66,7 +66,7 @@ interface DataContextType {
   ) => Promise<void>;
   updateProject: (
     projectId: string,
-    updatedData: { Name: string; Priority: number }
+    updatedData: { Name: string; Priority: number; frameworkDetails: string; }
   ) => Promise<void>;
   createTask: (
     newTaskData: Omit<Task, "rowIndex" | "_id" | "Check">
@@ -212,6 +212,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         ProjectID: p.projectId,
         Name: p.projectName,
         Priority: p.priority,
+        frameworkDetails: p.frameworkDetails,
       }));
       formattedProjects.sort((a, b) => a.Priority - b.Priority);
       setProjects(formattedProjects);
@@ -531,7 +532,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   const updateProject = useCallback(
     async (
       projectId: string,
-      updatedData: { Name: string; Priority: number }
+      updatedData: { Name: string; Priority: number; frameworkDetails: string; }
     ) => {
       if (!user) return;
 
@@ -545,6 +546,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             updatedData: {
               projectName: updatedData.Name,
               priority: updatedData.Priority,
+              frameworkDetails: updatedData.frameworkDetails,
             },
           },
         });
@@ -815,7 +817,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     isLoadingProjects,
     isLoadingTasks,
     isLoadingAllTasks,
-    isOperating,
+isOperating,
     error,
 
     // Derived Data
