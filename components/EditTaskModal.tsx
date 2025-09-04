@@ -249,6 +249,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   isLoading,
 }) => {
   const [formData, setFormData] = useState<Task | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -259,6 +260,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
         AttachmentLink: task.AttachmentLink || "",
       };
       setFormData(formattedTask);
+      setIsEditing(false); // Reset to view mode when task changes
     }
   }, [task]);
 
@@ -302,7 +304,16 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
     if (formData) {
       onSave(formData);
+      setIsEditing(false); // Return to view mode after saving
     }
+  };
+
+  const handleCancelEdit = () => {
+    // Reset form data to original task data
+    if (task) {
+      setFormData(task);
+    }
+    setIsEditing(false);
   };
 
   const helpLeadTime = useMemo(() => {
@@ -320,10 +331,12 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
   };
 
+  const currentModeIsView = isViewOnly || !isEditing;
+
   return (
     <div
-      className="fixed inset-0 bg-white/70 bg-opacity-50 z-40 flex items-center justify-center p-4"
-      onClick={onClose}
+      className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4"
+      onClick={handleClose}
     >
       <div
         className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
@@ -332,19 +345,19 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
         {/* Header */}
         <header className="flex justify-between items-center p-6 border-b sticky top-0 bg-white z-10">
           <h2 className="text-xl font-bold text-gray-800">
-            {isViewOnly ? "รายละเอียด Task" : "แก้ไข Task"}
+            {currentModeIsView ? "รายละเอียด Task" : "แก้ไข Task"}
           </h2>
           <button
             onClick={handleClose}
             disabled={isLoading}
-            className="text-gray-400 hover:text-gray-600 disabled:opacity-30"
+            className="text-gray-400 hover:text-gray-600 disabled:opacity-30 text-2xl"
           >
             &times;
           </button>
         </header>
-        {/* ... Header remains the same ... */}
+        
         <div className="overflow-y-auto">
-          {isViewOnly ? (
+          {currentModeIsView ? (
             <TaskDetailsView task={formData} />
           ) : (
             <form onSubmit={handleSubmit} className="overflow-y-auto">
@@ -484,68 +497,73 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                       />
                     </FormField>
                   </div>
-
-                  {/* <div className="md:col-span-2">
-                    <FormField label="Attachment Link (ลิงก์แนบ)">
-                      <input
-                        type="text"
-                        name="AttachmentLink"
-                        value={formData.AttachmentLink ?? ""} 
-                        onChange={handleChange}
-                        className={baseInputClass}
-                      />
-                    </FormField>
-                  </div> */}
-                </div>
-
-                <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    disabled={isLoading}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {isLoading ? (
-                      <span className="flex items-center">
-                        {/* Loading Spinner SVG */}
-                        <svg
-                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        กำลังบันทึก...
-                      </span>
-                    ) : (
-                      "บันทึก"
-                    )}
-                  </button>
                 </div>
               </fieldset>
             </form>
           )}
         </div>
+        {/* Footer */}
+        <footer className="flex justify-between items-center p-6 border-t bg-gray-50 rounded-b-xl">
+          <div>
+            <button 
+              onClick={() => onNavigate('previous')}
+              disabled={!canNavigatePrev || isLoading}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50 disabled:opacity-50"
+            >
+              <ArrowLeftIcon />
+            </button>
+            <button 
+              onClick={() => onNavigate('next')}
+              disabled={!canNavigateNext || isLoading}
+              className="ml-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50 disabled:opacity-50"
+            >
+              <ArrowRightIcon />
+            </button>
+          </div>
+          <div>
+            {currentModeIsView ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  disabled={isLoading}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50"
+                >
+                  ปิด
+                </button>
+                {!isViewOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    disabled={isLoading}
+                    className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none disabled:bg-gray-400"
+                  >
+                    แก้ไข
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  disabled={isLoading}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button" // Should be type="button" to not submit the form directly
+                  onClick={handleSubmit} // We call handleSubmit manually
+                  disabled={isLoading}
+                  className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
+              </>
+            )}
+          </div>
+        </footer>
       </div>
     </div>
   );

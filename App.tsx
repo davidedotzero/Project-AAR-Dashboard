@@ -62,7 +62,6 @@ const AppContent = () => {
     error,
     selectedProjectId,
     setSelectedProjectId,
-    handleProjectSelect,
     saveTask,
     createProject,
     updateProject,
@@ -91,7 +90,8 @@ const AppContent = () => {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/dashboard" element={<DashboardTab onBulkUpdateDeadline={bulkUpdateDeadline} />} />
-            <Route path="/projects" element={<ProjectsTab projects={projects} onSelectProject={handleProjectSelect} onDeleteProject={(project) => openDeleteModal("project", project)} />} />
+            <Route path="/projects" element={<ProjectsTab projects={projects} onDeleteProject={(project) => openDeleteModal("project", project)} />} />
+            <Route path="/tasks/:projectName" element={<TasksTab tasks={tasks} onEditTask={openEditModal} onTaskView={(task) => openViewModal(task, tasks)} onDeleteTask={(task) => openDeleteModal("task", task)} onBulkUpdateDeadline={bulkUpdateDeadline} />} />
             <Route path="/tasks" element={<TasksTab tasks={tasks} onEditTask={openEditModal} onTaskView={(task) => openViewModal(task, tasks)} onDeleteTask={(task) => openDeleteModal("task", task)} onBulkUpdateDeadline={bulkUpdateDeadline} />} />
             <Route path="/profile" element={<ProfileTab />} />
           </Routes>

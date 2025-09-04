@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import type { Task } from "../types";
 import { statusColorMap, ownerOptions, statusOptions } from "@/constants";
 import { EditIcon, ViewIcon, DeleteIcon } from "@/components/icons";
@@ -144,6 +145,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   onOpenCreateTask,
   onBulkUpdateDeadline,
 }) => {
+  const { projectName } = useParams<{ projectName: string }>();
   const { user } = useAuth(); // [✅ เพิ่ม]
   const [ownerFilter, setOwnerFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -158,7 +160,16 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [newDeadline, setNewDeadline] = useState<string>("");
 
-  const { refreshAllData, selectedProjectId } = useData();
+  const { refreshAllData, projects, selectedProjectId, setSelectedProjectId } = useData();
+
+  useEffect(() => {
+    if (projectName) {
+      const project = projects.find(p => p.Name === projectName);
+      if (project) {
+        setSelectedProjectId(project.ProjectID);
+      }
+    }
+  }, [projectName, projects, setSelectedProjectId]);
 
   const handleStatFilterClick = (filterType: string) => {
     setActiveStatFilter((prev) => (prev === filterType ? null : filterType));
