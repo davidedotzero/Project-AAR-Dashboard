@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { UIProvider } from "./contexts/UIContext";
 import { DataProvider } from "./contexts/DataContext";
-import { GlobalFilterProvider } from "./contexts/GlobalFilterContext";
+import { GlobalFilterProvider } from "./components/GlobalFilterContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "./contexts/AuthContext";
 import { BrowserRouter } from "react-router-dom";

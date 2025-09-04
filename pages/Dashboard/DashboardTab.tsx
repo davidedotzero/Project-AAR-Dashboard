@@ -1,6 +1,6 @@
 // components/DashboardTab.tsx (New File)
 import React, { useMemo, useState, useEffect } from "react";
-import { useGlobalFilters } from "@/contexts/GlobalFilterContext";
+import { useGlobalFilters } from "@/components/GlobalFilterContext";
 import { useData } from "@/contexts/DataContext";
 import { useUI } from "@/contexts/UIContext";
 import { Project, Task } from "@/types";
