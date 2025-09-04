@@ -1,5 +1,5 @@
-// components/Header.tsx (New File)
 import React, { useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   ChartBarIcon,
   FolderKanbanIcon,
@@ -10,81 +10,65 @@ import {
 import type { Project } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 
-interface TabButtonProps {
-  id: string;
+interface NavLinkProps {
+  to: string;
   label: string;
   icon: React.ReactNode;
-  activeTab: string;
-  onClick: (id: string) => void;
 }
 
-const TabButton: React.FC<TabButtonProps> = ({
-  id,
-  label,
-  icon,
-  activeTab,
-  onClick,
-}) => (
-  <button
-    onClick={() => onClick(id)}
-    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-      activeTab === id
-        ? "bg-orange-100 text-orange-600"
-        : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
-    }`}
+const NavItem: React.FC<NavLinkProps> = ({ to, label, icon }) => (
+  <NavLink
+    to={to}
+    className={({ isActive }) =>
+      `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+        isActive
+          ? "bg-orange-100 text-orange-600"
+          : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+      }`
+    }
   >
     <div className="mr-2">{icon}</div>
     <span>{label}</span>
-  </button>
+  </NavLink>
 );
 
 interface HeaderProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   projects: Project[];
   selectedProjectId: string | null;
   setSelectedProjectId: (id: string | null) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  activeTab,
-  setActiveTab,
   projects,
   selectedProjectId,
   setSelectedProjectId,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth();
+  const location = useLocation();
+  const activeTab = location.pathname;
 
   const navLinks = (
     <>
-      <TabButton
-        id="profile"
+      <NavItem
+        to="/profile"
         label={user?.name || "Profile"}
         icon={<UserCircleIcon />}
-        activeTab={activeTab}
-        onClick={setActiveTab}
       />
-      <TabButton
-        id="dashboard"
+      <NavItem
+        to="/dashboard"
         label="รายการทั้งหมด"
         icon={<ChartBarIcon />}
-        activeTab={activeTab}
-        onClick={setActiveTab}
       />
-      <TabButton
-        id="projects"
+      <NavItem
+        to="/projects"
         label="โปรเจกต์"
         icon={<FolderKanbanIcon />}
-        activeTab={activeTab}
-        onClick={setActiveTab}
       />
-      <TabButton
-        id="tasks"
+      <NavItem
+        to="/tasks"
         label="รายการ Task"
         icon={<FolderKanbanIcon />}
-        activeTab={activeTab}
-        onClick={setActiveTab}
       />
     </>
   );
@@ -103,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right Section: Project Selector (Conditional) */}
-          {activeTab === "tasks" && (
+          {activeTab === "/tasks" && (
             <div className="hidden md:block ml-4">
               <select
                 id="project-selector"
@@ -143,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({
           <nav className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
             {navLinks}
             {/* Mobile Project Selector (Conditional) */}
-            {activeTab === "tasks" && (
+            {activeTab === "/tasks" && (
               <div className="pt-4 pb-2 px-2">
                 <label className="text-xs font-semibold text-gray-500">
                   SELECT OPERATION

@@ -14,8 +14,6 @@ type itemToDelete = {
 
 interface UIContextType {
   // Navigation & Filters
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   filterTeam: string;
   setFilterTeam: (team: string) => void;
   isSidebarOpen: boolean;
@@ -42,7 +40,7 @@ interface UIContextType {
 
   // all Task Modal Actions
   openViewModal: (task: Task, allTasks: Task[]) => void;
-  closeModal: () => void;
+  closeModals: () => void;
   openCreateProjectModal: () => void;
   openEditProjectModal: (project: Project) => void;
   openDeleteModal: (type: "task" | "project", data: any) => void;
@@ -57,7 +55,6 @@ const UIContext = createContext<UIContextType | undefined>(undefined);
 export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [activeTab, setActiveTab] = useState("dashboard");
   const [filterTeam, setFilterTeam] = useState("ALL");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -129,7 +126,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const openCreateTaskModal = useCallback((defaults: {phase?: string; owner?: string}) => {
-    setPhaseForNewTask(defaults);
+    setNewTaskDefaults(defaults);
     setIsCreateTaskModalOpen(true);
   }, []);
 
@@ -149,8 +146,6 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const value = {
-    activeTab,
-    setActiveTab,
     filterTeam,
     setFilterTeam,
     isSidebarOpen,
@@ -165,7 +160,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({
     currentTask,
     currentIndex,
     itemToDelete,
-    // phaseForNewTask,
+    phaseForNewTask,
 
     openEditModal,
     openViewModal,

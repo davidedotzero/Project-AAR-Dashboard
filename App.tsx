@@ -1,4 +1,5 @@
 import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUI } from "@/contexts/UIContext";
 import { useData } from "@/contexts/DataContext";
@@ -33,8 +34,6 @@ const ErrorDisplay: React.FC<{ message: string }> = ({ message }) => (
 const AppContent = () => {
   // All data and UI hooks are called here, unconditionally.
   const {
-    activeTab,
-    setActiveTab, // <-- Make sure setActiveTab is destructured
     isEditModalOpen,
     isViewModalOpen,
     isCreateProjectModalOpen,
@@ -75,55 +74,27 @@ const AppContent = () => {
 
   const { user } = useAuth();
 
-  // Your existing renderContent logic
-  const renderContent = () => {
-    switch (activeTab) {
-      case "dashboard":
-        return <DashboardTab onBulkUpdateDeadline={bulkUpdateDeadline} />;
-      case "projects":
-        return (
-          <ProjectsTab
-            projects={projects}
-            onSelectProject={handleProjectSelect}
-            onDeleteProject={(project) => openDeleteModal("project", project)}
-          />
-        );
-      case "tasks":
-        return (
-          <TasksTab
-            tasks={tasks}
-            onEditTask={openEditModal}
-            onTaskView={(task) => openViewModal(task, tasks)}
-            onDeleteTask={(task) => openDeleteModal("task", task)}
-            onBulkUpdateDeadline={bulkUpdateDeadline}
-          />
-        );
-      case "profile":
-        return <ProfileTab />;
-      default:
-        return <DashboardTab />; // Default view
-    }
-  };
-
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans">
-      {/* Pass all necessary props to the Header component */}
       <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         user={user}
         projects={projects}
         selectedProjectId={selectedProjectId}
         setSelectedProjectId={setSelectedProjectId}
       />
       <main className="w-full p-4 md:p-8 overflow-y-auto flex-grow relative">
-        {/* Simplified loading/error display */}
         {loadingMessage ? (
           <LoadingIndicator message={loadingMessage} />
         ) : error ? (
           <ErrorDisplay message={error} />
         ) : (
-          renderContent()
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" />} />
+            <Route path="/dashboard" element={<DashboardTab onBulkUpdateDeadline={bulkUpdateDeadline} />} />
+            <Route path="/projects" element={<ProjectsTab projects={projects} onSelectProject={handleProjectSelect} onDeleteProject={(project) => openDeleteModal("project", project)} />} />
+            <Route path="/tasks" element={<TasksTab tasks={tasks} onEditTask={openEditModal} onTaskView={(task) => openViewModal(task, tasks)} onDeleteTask={(task) => openDeleteModal("task", task)} onBulkUpdateDeadline={bulkUpdateDeadline} />} />
+            <Route path="/profile" element={<ProfileTab />} />
+          </Routes>
         )}
       </main>
 
@@ -195,7 +166,7 @@ const App = () => {
 
   // The conditional rendering happens here, BEFORE other hooks would have been called.
   if (!user) {
-    return <LoginScreen />;  
+    return <LoginScreen />;
   }
 
   // If the user exists, we render the main app content.

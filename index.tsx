@@ -6,6 +6,7 @@ import { DataProvider } from "./contexts/DataContext";
 import { GlobalFilterProvider } from "./components/GlobalFilterContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "./contexts/AuthContext";
+import { BrowserRouter } from "react-router-dom";
 import './style.css'
 
 
@@ -21,15 +22,17 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <AuthProvider>
-        <UIProvider>
-          <DataProvider>
-            <GlobalFilterProvider>
-              <App />
-            </GlobalFilterProvider>
-          </DataProvider>
-        </UIProvider>
-      </AuthProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <UIProvider>
+            <DataProvider>
+              <GlobalFilterProvider>
+                <App />
+              </GlobalFilterProvider>
+            </DataProvider>
+          </UIProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </GoogleOAuthProvider>
   </React.StrictMode>
 );
