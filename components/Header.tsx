@@ -9,6 +9,7 @@ import {
 } from "@/components/icons";
 import type { Project } from "../types";
 import { useAuth } from "../contexts/AuthContext";
+import { NotificationBell } from "./NotificationBell";
 
 interface NavLinkProps {
   to: string;
@@ -86,31 +87,35 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Right Section: Project Selector (Conditional) */}
-          {activeTab === "/tasks" && (
-            <div className="hidden md:block ml-4">
-              <select
-                id="project-selector"
-                value={selectedProjectId || ""}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                disabled={!projects.length}
-                className="w-48 md:w-64 block px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-              >
-                {projects.length === 0 ? (
-                  <option value="">ไม่พบโปรเจกต์</option>
-                ) : (
-                  projects.map((p) => (
-                    <option key={p.ProjectID} value={p.ProjectID}>
-                      {p.Name}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
-          )}
+          {/* Right Section */}
+          <div className="hidden md:flex items-center space-x-4">
+            {activeTab === "/tasks" && (
+              <div className="ml-4">
+                <select
+                  id="project-selector"
+                  value={selectedProjectId || ""}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  disabled={!projects.length}
+                  className="w-48 md:w-64 block px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                >
+                  {projects.length === 0 ? (
+                    <option value="">ไม่พบโปรเจกต์</option>
+                  ) : (
+                    projects.map((p) => (
+                      <option key={p.ProjectID} value={p.ProjectID}>
+                        {p.Name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            )}
+            <NotificationBell />
+          </div>
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center">
+            <NotificationBell />
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="p-2 rounded-md text-gray-600 hover:bg-gray-100"
