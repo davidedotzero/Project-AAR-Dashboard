@@ -110,12 +110,12 @@ export const Header: React.FC<HeaderProps> = ({
                 </select>
               </div>
             )}
-            <NotificationBell />
+            {/* <NotificationBell /> */}
           </div>
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center">
-            <NotificationBell />
+            {/* <NotificationBell /> */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="p-2 rounded-md text-gray-600 hover:bg-gray-100"
