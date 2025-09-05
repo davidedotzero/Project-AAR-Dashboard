@@ -1,8 +1,6 @@
--- T16: MySQL Database Schema
--- This schema is designed based on the analysis of the existing Google Apps Script and Google Sheets structure.
+-- T16: MySQL Database Schema (Revised with Best Practices)
 
 -- 1. Users Table
--- Stores user information and roles.
 CREATE TABLE users (
     email VARCHAR(255) PRIMARY KEY,
     role VARCHAR(50),
@@ -10,52 +8,59 @@ CREATE TABLE users (
 );
 
 -- 2. Projects Table
--- Stores project information.
 CREATE TABLE projects (
-    projectId VARCHAR(255) PRIMARY KEY,
-    projectName VARCHAR(255),
+    -- ปรับเป็น VARCHAR(36) สำหรับ UUID และใช้ snake_case
+    project_id VARCHAR(36) PRIMARY KEY,
+    project_name VARCHAR(255),
     details TEXT,
     priority INT
 );
 
 -- 3. Tasks Table
--- Stores task information.
 CREATE TABLE tasks (
-    _id VARCHAR(255) PRIMARY KEY,
-    ProjectID VARCHAR(255),
-    `Check ✅` BOOLEAN,
-    Phase VARCHAR(100),
-    Task VARCHAR(255),
-    Owner VARCHAR(255),
-    Deadline DATE,
-    Status VARCHAR(100),
-    `Est. Hours` FLOAT,
-    `Impact Score` INT,
-    `Notes / Result` TEXT,
-    `Created At` DATETIME,
-    Attachment VARCHAR(255),
-    HelpAssignee VARCHAR(255),
-    HelpRequestedAt DATETIME,
-    FOREIGN KEY (ProjectID) REFERENCES projects(projectId)
+    task_id VARCHAR(36) PRIMARY KEY,
+    project_id VARCHAR(36),
+    is_checked BOOLEAN,                 -- แทน Check ✅
+    phase VARCHAR(100),
+    task_description VARCHAR(255),      -- แทน Task
+    deadline DATE,
+    status VARCHAR(100),
+    estimated_hours FLOAT,              -- แทน Est. Hours
+    impact_score INT,                   -- แทน Impact Score
+    notes TEXT,                         -- แทน Notes / Result
+    created_at DATETIME,
+    attachment_url VARCHAR(255),
+    help_requested_at DATETIME,
+
+    -- เปลี่ยนจาก Name เป็น Email สำหรับความสัมพันธ์
+    owner_email VARCHAR(255),
+    help_assignee_email VARCHAR(255),
+
+    -- Foreign Keys
+    FOREIGN KEY (project_id) REFERENCES projects(project_id),
+    FOREIGN KEY (owner_email) REFERENCES users(email),
+    FOREIGN KEY (help_assignee_email) REFERENCES users(email)
 );
 
 -- 4. Activity Log Table
--- Logs user activities.
 CREATE TABLE activity_log (
     id INT AUTO_INCREMENT PRIMARY KEY,
     timestamp DATETIME,
     user_email VARCHAR(255),
-    action VARCHAR(255)
+    action VARCHAR(255),
+    -- เพิ่ม Foreign Key เพื่อ Data Integrity
+    FOREIGN KEY (user_email) REFERENCES users(email)
 );
 
 -- 5. Task History Table
--- Logs changes to tasks.
 CREATE TABLE task_history (
     id INT AUTO_INCREMENT PRIMARY KEY,
     timestamp DATETIME,
-    task_id VARCHAR(255),
+    task_id VARCHAR(36),
     user_email VARCHAR(255),
     action VARCHAR(255),
     details TEXT,
-    FOREIGN KEY (task_id) REFERENCES tasks(_id)
+    -- Foreign Keys
+    FOREIGN KEY (task_id) REFERENCES tasks(task_id),
+    FOREIGN KEY (user_email) REFERENCES users(email)
 );
