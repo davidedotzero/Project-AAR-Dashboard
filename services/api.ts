@@ -1,23 +1,26 @@
-const SCRIPT_URL = import.meta.env.VITE_APP_SCRIPT_URL;
+const API_BASE_URL = 'http://localhost:3000/api';
 
 // --- Helper Function for Robust API Requests ---
 
 /**
- * จัดการการเรียก API ไปยัง Google Apps Script
+ * จัดการการเรียก API ไปยัง Backend ใหม่
  * ตรวจสอบ Error และรับประกันการ Parse ข้อมูล JSON อย่างปลอดภัย
  */
-export const apiRequest = async <T,>(body: object): Promise<T> => {
-  if (!SCRIPT_URL) {
-    throw new Error("VITE_APP_SCRIPT_URL is not defined.");
+export const apiRequest = async <T,>(endpoint: string, method: string = 'GET', body: object | null = null): Promise<T> => {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
   }
 
   try {
-    const response = await fetch(SCRIPT_URL, {
-      method: "POST",
-      // ใช้ text/plain เพื่อหลีกเลี่ยงปัญหา CORS preflight กับ Google Apps Script
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(body),
-    });
+    const response = await fetch(url, options);
 
     // 1. ตรวจสอบ HTTP Status
     if (!response.ok) {
@@ -34,7 +37,7 @@ export const apiRequest = async <T,>(body: object): Promise<T> => {
     // 3. พยายามแปลงเป็น JSON
     try {
       const result = JSON.parse(textData);
-      // ตรวจสอบสถานะจาก Backend (ตามโครงสร้างที่คาดหวังจาก GAS)
+      // ตรวจสอบสถานะจาก Backend (ตามโครงสร้างที่คาดหวังจาก Backend ใหม่)
       if (result.status !== "success") {
         throw new Error(
           result.message || "การดำเนินการล้มเหลว (Backend Error)."
@@ -47,7 +50,7 @@ export const apiRequest = async <T,>(body: object): Promise<T> => {
       if (parseError instanceof SyntaxError) {
         console.error("Failed to parse JSON. Raw data received:", textData);
         throw new Error(
-          "ได้รับข้อมูลที่ไม่ใช่รูปแบบ JSON. โปรดตรวจสอบ Logs หรือสิทธิ์ของ Google Apps Script."
+          "ได้รับข้อมูลที่ไม่ใช่รูปแบบ JSON. โปรดตรวจสอบ Logs ของ Backend."
         );
       }
       throw parseError;

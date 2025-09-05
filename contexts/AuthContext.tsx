@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-
-const SCRIPT_URL = import.meta.env.VITE_APP_SCRIPT_URL;
+import { apiRequest } from '@/services/api';
 
 interface User {
   email: string;
@@ -32,19 +31,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ op: 'verifyUserByEmail', payload: { email } }),
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      });
-      const result = await response.json();
-      
-      if (result.status === 'success' && result.data) {
-        const userData: User = result.data;
+      const userData = await apiRequest<User>('/users/verify', 'POST', { email });
+      if (userData) {
         setUser(userData);
         localStorage.setItem('project-aar-user', JSON.stringify(userData));
       } else {
-        throw new Error(result.message || 'User not authorized or not found.');
+        throw new Error('User not authorized or not found.');
       }
     } catch (error) {
       console.error("Login failed:", error);

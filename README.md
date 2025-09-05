@@ -68,3 +68,42 @@
 แอปพลิเคชันนี้ทำงานโดยการเรียก API ไปยัง Google Apps Script ที่ Deploy ไว้เป็น Web App
 * **URL ของ API:** ถูกกำหนดไว้ในตัวแปร `SCRIPT_URL` ในไฟล์ `src/App.tsx`
 * คุณต้องนำ URL ที่ได้จากการ Deploy Apps Script ของคุณมาใส่แทนที่ในตัวแปรนี้
+
+### Database Migration to MySQL
+
+Project is undergoing a database migration from Google Sheets to MySQL.
+
+**Phase 1: Design & Preparation**
+*   **Schema Design:** The new MySQL schema has been designed based on the existing data structure in Google Sheets. The schema is defined in the `mysql_schema.sql` file.
+
+**Phase 2: Data Migration**
+*   **Migration Script:** A Python script `migration.py` has been created to automate the data migration from Google Sheets to the MySQL database.
+
+    **Requirements:**
+    *   Python 3
+    *   `requests` library: `pip install requests`
+    *   `mysql-connector-python` library: `pip install mysql-connector-python`
+
+    **How to run:**
+    1.  Open the `migration.py` file.
+    2.  Replace the placeholder `ADMIN_EMAIL = "admin@example.com"` with an email address of a user who has 'admin' role in the application.
+    3.  Run the script from your terminal: `python migration.py`
+
+**Phase 3: Backend Refactoring**
+*   **Backend API:** A new backend API has been developed using Node.js and Express.js. The code is in the `backend-api` directory.
+
+### Backend API
+
+The backend API is built with Node.js and Express.js and connects to the MySQL database.
+
+**How to run:**
+1.  Navigate to the `backend-api` directory:
+    ```bash
+    cd backend-api
+    ```
+2.  Start the server:
+    ```bash
+    node index.js
+    ```
+3.  The API will be running at `http://localhost:3000`.
+93v4O~q7i
