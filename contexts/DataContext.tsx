@@ -57,7 +57,7 @@ interface DataContextType {
   // Actions
   setSelectedProjectId: (id: string | null) => void;
   handleProjectSelect: (projectId: string) => void;
-  saveTask: (updatedTask: Task) => Promise<void>;
+  saveTask: (taskData: Task | Omit<Task, "_id" | "rowIndex" | "Check">) => Promise<void>;
   bulkUpdateDeadline: (taskIds: string[], newDeadline: string) => Promise<void>;
   createProject: (
     projectName: string,
@@ -67,9 +67,6 @@ interface DataContextType {
   updateProject: (
     projectId: string,
     updatedData: { Name: string; Priority: number }
-  ) => Promise<void>;
-  createTask: (
-    newTaskData: Omit<Task, "rowIndex" | "_id" | "Check">
   ) => Promise<void>;
   confirmDelete: () => Promise<void>;
   refreshAllData: () => Promise<void>;
@@ -372,46 +369,86 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     [setActiveTab]
   );
 
-  // Save Task พร้อม Optimistic Update และ Rollback
   const saveTask = useCallback(
-    async (updatedTask: Task) => {
-      if (!user) return;
+    async (taskData: Task | Omit<Task, "_id" | "rowIndex" | "Check">) => {
+      if (!user) throw new Error("User not authenticated");
 
+      const isCreating = !('_id' in taskData); // ตรวจสอบว่าเป็น Task ใหม่หรือไม่
+      
+      // เตรียมข้อมูล Task ที่จะส่งไป Backend
+      // สำหรับ Task ใหม่, ต้องแน่ใจว่ามี ProjectID
+      const payloadTask = isCreating
+        ? { ...taskData, ProjectID: selectedProjectId }
+        : taskData;
+      
+      if (isCreating && (!selectedProjectId || selectedProjectId === 'ALL')) {
+          throw new Error("A project must be selected to create a new task.");
+      }
+      
+      // --- Optimistic UI ---
       // เก็บ State เก่าไว้เผื่อ Rollback
       let previousTasks: Task[] = [];
       let previousAllTasks: Task[] = [];
+      
+      // สร้าง Temp ID สำหรับการสร้างใหม่ เพื่อให้ React re-render ถูกต้อง
+      const tempId = `temp-${uuidv4()}`;
+      const taskWithTempId = { ...payloadTask, _id: tempId, rowIndex: 0, Check: false };
 
-      // 1. Optimistic UI update (อัปเดตหน้าจอทันที)
-      const updateState = (prevTasks: Task[]) =>
-        prevTasks.map((t) => (t._id === updatedTask._id ? updatedTask : t));
+      if (isCreating) {
+        // Optimistic UI for CREATE
+        setTasks(prev => {
+            previousTasks = prev;
+            return [...prev, taskWithTempId as Task];
+        });
+        setAllTasks(prev => {
+            previousAllTasks = prev;
+            return [...prev, taskWithTempId as Task];
+        });
+      } else {
+        // Optimistic UI for UPDATE
+        setTasks(prev => {
+            previousTasks = prev;
+            return prev.map(t => t._id === (taskData as Task)._id ? (taskData as Task) : t);
+        });
+        setAllTasks(prev => {
+            previousAllTasks = prev;
+            return prev.map(t => t._id === (taskData as Task)._id ? (taskData as Task) : t);
+        });
+      }
 
-      setTasks((prev) => {
-        previousTasks = prev;
-        return updateState(prev);
-      });
-      setAllTasks((prev) => {
-        previousAllTasks = prev;
-        return updateState(prev);
-      });
-
-      // 2. ส่งข้อมูลไป Backend
+      // --- Backend Call ---
       try {
         await handleApiAction(async () => {
-          await apiRequest({
-            op: "updateTask",
+          // [🔥 สำคัญ] เรียก `saveTask` operation ใหม่
+          const savedTask = await apiRequest<Task>({
+            op: "saveTask",
             user: user,
-            payload: { task: updatedTask },
+            payload: { taskData: payloadTask },
           });
+
+          // --- อัปเดต State ด้วยข้อมูลจริงที่ได้จาก Backend ---
+          const updateStateWithRealData = (prevTasks: Task[]) => {
+              if (isCreating) {
+                  // แทนที่ Task ที่มี Temp ID ด้วย Task จริงที่ได้กลับมา
+                  return prevTasks.map(t => t._id === tempId ? savedTask : t);
+              } else {
+                  // อัปเดตข้อมูล Task ที่แก้ไข (เผื่อ Backend มีการเปลี่ยนแปลงอะไรกลับมา)
+                  return prevTasks.map(t => t._id === savedTask._id ? savedTask : t);
+              }
+          };
+          
+          setTasks(updateStateWithRealData);
+          setAllTasks(updateStateWithRealData);
           closeModals();
         });
       } catch (err) {
-        // 3. Rollback UI หาก Backend ทำงานล้มเหลว
+        // --- Rollback UI ---
         setTasks(previousTasks);
         setAllTasks(previousAllTasks);
-        throw err; // ส่งต่อ Error
+        throw err;
       }
     },
-    [user, closeModals, handleApiAction]
+    [user, selectedProjectId, closeModals, handleApiAction]
   );
 
   const createProject = useCallback(
@@ -557,42 +594,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     [user, fetchProjects, closeModals, handleApiAction]
   );
 
-  // [✅ แก้ไข] ปรับโครงสร้างการส่งข้อมูลให้ใช้ payload
-  const createTask = useCallback(
-    async (newTaskData: Omit<Task, "rowIndex" | "_id" | "Check">) => {
-      if (!user || !selectedProjectId || selectedProjectId === "ALL") return;
-
-      await handleApiAction(async () => {
-        await apiRequest({
-          op: "createTask",
-          user: user,
-          // 👇 ย้าย taskData ไปไว้ใน payload 👇
-          payload: {
-            taskData: { ...newTaskData, ProjectID: selectedProjectId },
-          },
-        });
-
-        // Refetch ข้อมูล Task ของโปรเจกต์นี้ และข้อมูล Task ทั้งหมด
-        await fetchTasksForProject(selectedProjectId);
-        await fetchAllTasks();
-        closeModals();
-      });
-    },
-    [user, selectedProjectId, fetchTasksForProject, fetchAllTasks, closeModals, handleApiAction]
-  );
-
-  // [✅ แก้ไข] ปรับโครงสร้างการส่งข้อมูลให้ใช้ payload
+  
   const confirmDelete = useCallback(async () => {
     if (!user || !itemToDelete) return;
 
     const { type, data } = itemToDelete;
 
-    // เก็บ State เก่าไว้เผื่อ Rollback (สำหรับ Task)
+    // ... ส่วน Optimistic UI เหมือนเดิม ...
     let previousTasks: Task[] = [];
     let previousAllTasks: Task[] = [];
 
     try {
-      // Optimistic update for task deletion
       if (type === "task") {
         setTasks((prev) => {
           previousTasks = prev;
@@ -607,46 +619,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       await handleApiAction(async () => {
         const op = type === "task" ? "deleteTask" : "deleteProject";
 
-        // 👇 สร้าง Body ที่มีโครงสร้าง payload ที่ถูกต้อง 👇
+        // [✅ แก้ไขตรงนี้]
         const requestBody = {
           op: op,
           user: user,
           payload:
             type === "task"
-              ? { rowIndex: data.rowIndex }
+              // ส่ง taskId แทน rowIndex
+              ? { taskId: data._id } 
               : { projectId: data.ProjectID },
         };
 
         await apiRequest(requestBody);
 
         if (type !== "task") {
-          // Refetch หลังจากลบโปรเจกต์
           await refreshAllData();
         }
         closeModals();
       });
     } catch (err) {
-      // Rollback UI หากลบไม่สำเร็จ
       if (type === "task") {
         setTasks(previousTasks);
         setAllTasks(previousAllTasks);
       }
     }
-  }, [user, itemToDelete, refreshAllData, closeModals,handleApiAction]);
+  }, [user, itemToDelete, refreshAllData, closeModals, handleApiAction]);
 
-  // --- Derived/Calculated Data (Memoized) ---
-  // (ส่วนการคำนวณสถิติไม่มีการเปลี่ยนแปลง)
-
-  // const filteredTasks = useMemo(() => {
-  //   if (filterTeam === "ALL") return tasks;
-  //   return tasks.filter(
-  //     (task) =>
-  //       task["Feedback to Team"] &&
-  //       task["Feedback to Team"].includes(`@${filterTeam}`)
-  //   );
-  // }, [tasks, filterTeam]);
-
-  // การคำนวณสถิติ (Dashboard)
   const {
     operationScore,
     efficiencyRatio,
@@ -838,7 +836,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     saveTask,
     createProject,
     updateProject,
-    createTask,
     confirmDelete,
     refreshAllData,
     bulkUpdateDeadline,

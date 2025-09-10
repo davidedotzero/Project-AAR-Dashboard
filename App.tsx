@@ -72,6 +72,7 @@ const AppContent = () => {
   } = useData();
 
   const { user } = useAuth();
+  
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans">
@@ -122,6 +123,7 @@ const AppContent = () => {
         onCreate={createTask}
         initialData={newTaskDefaults}
         isLoading={isOperating}
+        onSave={saveTask}
       />
       {(isEditModalOpen || isViewModalOpen) && currentTask && (
         <EditTaskModal

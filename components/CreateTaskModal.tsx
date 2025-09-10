@@ -26,7 +26,7 @@ type NewTaskData = Partial<
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (newTaskData: NewTaskData) => void;
+  onSave: (task: Omit<Task, "_id" | "rowIndex" | "Check">) => void;
   initialData: { phase?: string; owner?: string } | null;
   isLoading: boolean;
 }
@@ -46,6 +46,7 @@ const FormField: React.FC<{ label: string; children: React.ReactNode }> = ({
 export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   isOpen,
   onClose,
+  onSave,
   onCreate,
   initialData,
   isLoading,
@@ -89,7 +90,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     if (isCreating || isLoading || !formData.Task) return;
     setIsCreating(true);
     try {
-      await onCreate(formData);
+      await onSave(formData);
     } catch (error) {
       console.error("Failed to create task:", error);
     } finally {
