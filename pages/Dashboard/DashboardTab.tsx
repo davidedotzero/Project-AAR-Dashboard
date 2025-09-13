@@ -163,13 +163,13 @@ const SortIcon: React.FC<{ direction: "asc" | "desc" }> = ({ direction }) => (
 const formatDateToDDMMYYYY = (
   dateString: string | null | undefined
 ): string => {
-  if (!dateString) return "N/A";
+  if (!dateString) return "วันที่ไม่ระบุ";
   // เนื่องจาก Format คือ YYYY-MM-DD
   const parts = dateString.split("-");
   if (parts.length === 3) {
     return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
   }
-  return "N/A";
+  return "วันที่ไม่ระบุ";
 };
 
 const getTodayYYYYMMDD = () => {
@@ -273,7 +273,7 @@ export const DashboardTab: React.FC = () => {
     const avgLeadTime =
       tasksRequestingHelp.length > 0
         ? (totalLeadTime / tasksRequestingHelp.length).toFixed(1)
-        : "N/A";
+        : "คำนวณไม่ได้";
 
     const metrics = {
       overdue: overdueCount,

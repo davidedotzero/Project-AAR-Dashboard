@@ -98,6 +98,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     }
   };
 
+
   const baseInputClass =
     "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm ...";
 
@@ -121,7 +122,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           <fieldset disabled={isLoading}>
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
               <div className="md:col-span-2">
-                <FormField label="Task">
+                <FormField label="รายการ Task">
                   <input
                     type="text"
                     name="Task"
@@ -132,7 +133,19 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   />
                 </FormField>
               </div>
-              <FormField label="Phase">
+              <div className="md:col-span-2">
+                <FormField label="หมายเหตุ / ผลลัพธ์">
+                  <textarea
+                    type="textarea"
+                    name="Note / Result"
+                    value={formData["Note / Result"] || ""}
+                    onChange={handleChange}
+                    required
+                    className={baseInputClass}
+                  />
+                </FormField>
+              </div>
+              {/* <FormField label="Phase">
                 <select
                   name="Phase"
                   value={formData.Phase}
@@ -145,8 +158,8 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                     </option>
                   ))}
                 </select>
-              </FormField>
-              <FormField label="Owner">
+              </FormField> */}
+              <FormField label="ทีมที่รับผิดชอบ">
                 <select
                   name="Owner"
                   value={formData.Owner}
@@ -160,7 +173,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   ))}
                 </select>
               </FormField>
-              <FormField label="Deadline">
+              <FormField label="กำหนดเสร็จ">
                 <input
                   type="date"
                   name="Deadline"
@@ -169,7 +182,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   className={baseInputClass}
                 />
               </FormField>
-              <FormField label="Est. Hours">
+              {/* <FormField label="Est. Hours">
                 <input
                   type="number"
                   name="Est. Hours"
@@ -177,7 +190,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   onChange={handleChange}
                   className={baseInputClass}
                 />
-              </FormField>
+              </FormField> */}
             </div>
           </fieldset>
           <footer className="flex justify-end p-6 bg-gray-50 border-t rounded-b-xl">

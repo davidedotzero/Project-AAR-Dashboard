@@ -111,10 +111,13 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
         <div className="md:col-span-2 mb-6">
             <DetailItem label="Task">
               <p className="text-xl font-bold text-gray-800">{task.Task || "-"}</p>
+
+                <p className="text-sm text-gray-500 mt-1">Task of Project: {task.Project}</p>
+
             </DetailItem>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            <DetailItem label="Phase">
+            {/* <DetailItem label="Phase">
               <span
                 className={`px-2.5 py-1 text-sm font-semibold rounded-full ${
                   phaseColorMap[task.Phase]?.bg
@@ -122,7 +125,7 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
               >
                 {task.Phase}
               </span>
-            </DetailItem>
+            </DetailItem> */}
 
             <DetailItem label="Owner">
               <span className="px-2.5 py-1 text-sm font-semibold text-orange-800 bg-orange-100 rounded-full">
@@ -194,7 +197,7 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
           </p>
         </DetailItem>
 
-        <DetailItem label="Attachment Link (ลิงก์แนบ)">
+        {/* <DetailItem label="Attachment Link (ลิงก์แนบ)">
           {attachmentLink ? (
             <a
               href={attachmentLink}
@@ -208,7 +211,7 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
           ) : (
             <p className="p-3 bg-gray-50 rounded-md border">-</p>
           )}
-        </DetailItem>
+        </DetailItem> */}
       </div>
     </div>
   );
@@ -219,6 +222,7 @@ interface EditTaskModalProps {
   onClose: () => void;
   onSave: (task: Task) => void;
   task: Task;
+  project: Project ;
   isViewOnly?: boolean;
   onNavigate: (direction: "next" | "previous") => void;
   canNavigatePrev: boolean;
@@ -244,6 +248,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   onClose,
   onSave,
   task,
+  project,
   isViewOnly = false,
   onNavigate,
   canNavigatePrev,
@@ -344,6 +349,8 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
   const currentModeIsView = isViewOnly || !isEditing;
 
+  const projectName = formData?.ProjectName || "Unknown Project";
+
   return (
     <div
       className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4"
@@ -356,7 +363,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
         {/* Header */}
         <header className="flex justify-between items-center p-6 border-b sticky top-0 bg-white z-10">
           <h2 className="text-xl font-bold text-gray-800">
-            {currentModeIsView ? "รายละเอียด Task" : "แก้ไข Task"}
+            {currentModeIsView ? `รายละเอียด Task ของ โปรเจกต์ ${projectName}` : "แก้ไข Task"}
           </h2>
           <button
             onClick={handleClose}
