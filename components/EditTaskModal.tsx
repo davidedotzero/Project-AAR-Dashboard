@@ -103,6 +103,14 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
   const helpLeadTime = calculateLeadTime(task.Deadline, task.HelpRequestedAt);
   const attachmentLink = task.AttachmentLink;
 
+  const { projects } = useData();
+
+  const selectedProject = useMemo(() => {
+    if (!task || !projects) return null;
+
+    return projects.find(p => p.ProjectID === task.ProjectID);
+      }, [task, projects]);
+
   return (
     <div className="p-8 space-y-8">
 
@@ -111,10 +119,12 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
         <div className="md:col-span-2 mb-6">
             <DetailItem label="Task">
               <p className="text-xl font-bold text-gray-800">{task.Task || "-"}</p>
+              <strong>ของ Project:</strong> 
+              <p>{selectedProject ? selectedProject.Name : `(${task.ProjectID})`}</p>
             </DetailItem>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            <DetailItem label="Phase">
+            {/* <DetailItem label="Phase">
               <span
                 className={`px-2.5 py-1 text-sm font-semibold rounded-full ${
                   phaseColorMap[task.Phase]?.bg
@@ -122,7 +132,7 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
               >
                 {task.Phase}
               </span>
-            </DetailItem>
+            </DetailItem> */}
 
             <DetailItem label="Owner">
               <span className="px-2.5 py-1 text-sm font-semibold text-orange-800 bg-orange-100 rounded-full">
@@ -140,13 +150,13 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
               <p className="text-base">{formatDateToDDMMYYYY(task.Deadline)}</p>
             </DetailItem>
 
-            <DetailItem label="Est. Hours">
+            {/* <DetailItem label="Est. Hours">
               <p>{task["Est. Hours"] ?? "-"} ชั่วโมง</p>
             </DetailItem>
 
             <DetailItem label="Actual Hours">
               <p>{task["Actual Hours"] ?? "-"} ชั่วโมง</p>
-            </DetailItem>
+            </DetailItem> */}
         </div>
       </div>
 
@@ -194,7 +204,7 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
           </p>
         </DetailItem>
 
-        <DetailItem label="Attachment Link (ลิงก์แนบ)">
+        {/* <DetailItem label="Attachment Link (ลิงก์แนบ)">
           {attachmentLink ? (
             <a
               href={attachmentLink}
@@ -208,7 +218,7 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
           ) : (
             <p className="p-3 bg-gray-50 rounded-md border">-</p>
           )}
-        </DetailItem>
+        </DetailItem> */}
       </div>
     </div>
   );
@@ -253,6 +263,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const [formData, setFormData] = useState<Task | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const { projects } = useData();
 
   useEffect(() => {
     if (task) {
@@ -326,10 +337,16 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
     setIsEditing(false);
   };
-
+  
   const helpLeadTime = useMemo(() => {
     return calculateLeadTime(formData?.Deadline, formData?.HelpRequestedAt);
   }, [formData?.Deadline, formData?.HelpRequestedAt]);
+  
+  const selectedProject = useMemo(() => {
+    if (!task || !projects) return null;
+
+    return projects.find(p => p.ProjectID === task.ProjectID);
+      }, [task, projects]);
 
   const baseInputClass =
     "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-500";
@@ -371,9 +388,14 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
           {currentModeIsView ? (
             <TaskDetailsView task={formData} />
           ) : (
+            
             <form onSubmit={handleSubmit} className="overflow-y-auto">
               <fieldset disabled={isLoading}>
                 <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                  <div className="md:col-span-2 mb-6">
+                  <strong>ของ Project:</strong> 
+                  <p>{selectedProject ? selectedProject.Name : `(${task.ProjectID})`}</p>
+                  </div>
                   <div className="md:col-span-2">
                     <FormField label="Task">
                       <input
