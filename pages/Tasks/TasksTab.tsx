@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import type { Task } from "../types";
+import type { Task } from "@/types";
 import { statusColorMap, ownerOptions, statusOptions } from "@/constants";
 import { EditIcon, ViewIcon, DeleteIcon } from "@/components/icons";
 import { useData } from "@/contexts/DataContext";
@@ -151,7 +151,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
-  const { openCreateTaskModal } = useUI();
+  const { openCreateTaskModal,openEditModal } = useUI();
   // State สำหรับ Bulk Action
   // ใช้ Set เพื่อประสิทธิภาพในการจัดการ ID
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(
@@ -646,7 +646,8 @@ export const TasksTab: React.FC<TasksTabProps> = ({
               const isSelected = selectedTaskIds.has(task._id);
 
               return (
-                <tr key={task._id} className="bg-white hover:bg-orange-50">
+                <tr key={task._id} className="bg-white hover:bg-orange-50 cursor-pointer" onClick={() => openEditModal(task)}>
+                  
                   <td className="w-4 p-4">
                     {userCanEdit ? (
                       <div className="flex items-center">
