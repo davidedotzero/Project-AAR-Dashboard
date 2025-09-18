@@ -150,14 +150,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         return phaseAIndex < phaseBIndex ? -1 : 1;
       });
       const formatToLocalISODate = (gasDate: any): string => {
-        if (!gasDate || (typeof gasDate === "string" && gasDate.trim() === "")) {
-          return "";
-        }
+        if (!gasDate) return "";
         const date = new Date(gasDate); // Browser ตีความตาม Local Time
-        if (isNaN(date.getTime())) {
-    console.warn(`Invalid date value received from API: "${gasDate}". Returning empty string.`);
-    return "";
-  }
+        if (isNaN(date.getTime())) return "";
 
         // จัดรูปแบบ YYYY-MM-DD
         const year = date.getFullYear();
@@ -474,9 +469,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             HelpRequestedAt,
             ...taskDetails
         } = task;
-        if (!taskDetails.Deadline) {
-            taskDetails.Deadline = null;
-        }
         return {
           ...taskDetails,
           // ตรวจสอบให้แน่ใจว่าค่าสำคัญมีครบถ้วนตามที่กำหนดใน Modal
@@ -496,17 +488,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             projectName: projectName,
             priority: priority,
             selectedTasks: tasksPayload,
-            startDate: new Date().toISOString(),
           },
         });
 
         // Refetch ข้อมูลใหม่
         await refreshAllData();
         setSelectedProjectId(newProjectId);
+        setActiveTab("dashboard");
         closeModals();
       });
     },
-    [user, refreshAllData, closeModals, handleApiAction]
+    [user, refreshAllData, setActiveTab, closeModals, handleApiAction]
   );
 
   // [✅ เพิ่มใหม่] Bulk Update Deadline พร้อม Optimistic Update และ Rollback
