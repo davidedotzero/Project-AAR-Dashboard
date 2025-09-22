@@ -8,21 +8,29 @@ interface CreateProjectModalProps {
   onCreate: (
     projectName: string,
     priority: number,
-    selectedTasks: Task[] // ส่งเป็น Object แทนที่จะเป็น string
+    selectedTasks: Task[]
   ) => void;
   initialTasks: Task[];
   isLoading: boolean;
 }
 
+// [⭐ ใหม่] Constants
+const DEFAULT_PRIORITY = 5;
+const MAX_PRIORITY = 10;
+const DEFAULT_DEADLINE_DAYS = 7;
+const BULK_DEADLINE_OPTIONS = [1, 3, 5, 7, 10, 15];
+const MAX_INPUT_LENGTH = 255; // สำหรับ Security
+
 const parsePriorityInput = (value: string, defaultValue: number): number => {
   if (value === "") return defaultValue;
   const num = Number(value);
   if (isNaN(num) || num < 0) return 0;
-  if (num > 10) return 10;
+  if (num > MAX_PRIORITY) return MAX_PRIORITY;
   return num;
 };
 
 const getFormattedDate = (date: Date): string => {
+  // ข้อควรระวัง: ฟังก์ชันนี้ใช้ Local Timezone อาจมีปัญหา Off-by-one ได้
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -42,7 +50,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   isLoading,
 }) => {
   const [projectName, setProjectName] = useState("");
-  const [priority, setPriority] = useState<string>("5");
+  const [priority, setPriority] = useState<string>(String(DEFAULT_PRIORITY));
 
   // State สำหรับจัดการ Task ทั้งหมดใน Modal นี้
   const [projectTasks, setProjectTasks] = useState<Task[]>([]);
@@ -54,24 +62,31 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   // State สำหรับการเพิ่ม Task ใหม่
   const [newTaskName, setNewTaskName] = useState("");
   const [newTaskOwner, setNewTaskOwner] = useState(ownerOptions[0]);
+  const [newTaskDeadline, setNewTaskDeadline] = useState(getFutureDate(DEFAULT_DEADLINE_DAYS));
 
-  const [newTaskDeadline, setNewTaskDeadline] = useState(getFutureDate(7));
+  // [✅ Security] คำนวณวันที่ปัจจุบันเพื่อใช้เป็นค่า min ใน input date
+  const todayDate = useMemo(() => getFutureDate(0), []);
 
   // เมื่อเปิด Modal ให้ตั้งค่าเริ่มต้น
   useEffect(() => {
     if (isOpen) {
-      const defaultDeadline = getFutureDate(7);
-      // เพิ่ม ID ชั่วคราวเพื่อให้ง่ายต่อการจัดการ
+      const defaultDeadline = getFutureDate(DEFAULT_DEADLINE_DAYS);
+      // [✅ Bugfix] ใช้ index แทน Date.now() เพื่อป้องกัน ID ซ้ำใน Loop
       const tasksWithIds = initialTasks.map((task, index) => ({
         ...task,
-        _id: `temp-${index}-${Date.now()}`,
+        _id: `temp-${index}`,
+        // ตรวจสอบให้แน่ใจว่ามี Deadline เริ่มต้น
+        Deadline: task.Deadline || defaultDeadline,
       }));
       setProjectTasks(tasksWithIds);
       // เลือก Task ทั้งหมดเป็นค่าเริ่มต้น
       setSelectedTaskIds(new Set(tasksWithIds.map((t) => t._id!)));
       setProjectName("");
-      setPriority("5");
+      setPriority(String(DEFAULT_PRIORITY));
+      setNewTaskDeadline(defaultDeadline);
+      setNewTaskName("");
     }
+  // ข้อควรระวัง: การมี initialTasks ที่นี่อาจทำให้เกิด Bug การ Reset ตามที่รีวิวไว้
   }, [isOpen, initialTasks]);
 
   const handleTaskDeadlineChange = (taskId: string, newDeadline: string) => {
@@ -79,6 +94,22 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       prev.map((task) =>
         task._id === taskId ? { ...task, Deadline: newDeadline } : task
       )
+    );
+  };
+
+  // [⭐ ใหม่] ฟังก์ชัน Bulk Update Deadline
+  const handleBulkDeadlineUpdate = (daysAhead: number) => {
+    const newDeadline = getFutureDate(daysAhead);
+
+    setProjectTasks((prevTasks) =>
+      // วนลูป Task ทั้งหมด
+      prevTasks.map((task) => {
+        // อัปเดตเฉพาะ Task ที่ถูกเลือกอยู่เท่านั้น (อยู่ใน selectedTaskIds)
+        if (selectedTaskIds.has(task._id!)) {
+          return { ...task, Deadline: newDeadline };
+        }
+        return task;
+      })
     );
   };
 
@@ -94,11 +125,22 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     });
   };
 
+  // [⭐ ใหม่] Logic สำหรับ Select All (เพื่อ UX ที่ดีขึ้นในการทำ Bulk)
+  const isAllSelected = projectTasks.length > 0 && selectedTaskIds.size === projectTasks.length;
+
+  const handleSelectAllToggle = () => {
+    if (isAllSelected) {
+      setSelectedTaskIds(new Set());
+    } else {
+      setSelectedTaskIds(new Set(projectTasks.map(t => t._id!)));
+    }
+  };
+
   const handleAddTask = () => {
     if (!newTaskName.trim() || !newTaskDeadline) return;
 
     const newTask: Task = {
-      _id: `new-${Date.now()}`,
+      _id: `new-${Date.now()}`, // สำหรับ Task ใหม่ การใช้ Date.now() ยังคงเหมาะสม
       Task: newTaskName.trim(),
       Owner: newTaskOwner,
       Status: "In Progress", // ค่าเริ่มต้นใหม่
@@ -127,6 +169,8 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
     // Reset input fields
     setNewTaskName("");
+    // Reset deadline สำหรับ task ถัดไป
+    setNewTaskDeadline(getFutureDate(DEFAULT_DEADLINE_DAYS));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -138,11 +182,23 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     );
 
     if (!trimmedName || selectedTasksObjects.length === 0) {
-      console.error("กรุณากรอกชื่อโปรเจกต์และเลือกอย่างน้อย 1 Task");
+      // [✅ UX] ใช้ alert หรือ UI Feedback แทน console.error
+      alert("กรุณากรอกชื่อโปรเจกต์และเลือกอย่างน้อย 1 Task");
       return;
     }
-    const numPriority = parsePriorityInput(priority, 5);
-    onCreate(trimmedName, numPriority, selectedTasksObjects);
+    const numPriority = parsePriorityInput(priority, DEFAULT_PRIORITY);
+
+    // [✅ Best Practice] ทำความสะอาดข้อมูลก่อนส่ง: ลบ Temporary ID ออก
+    const tasksToSubmit = selectedTasksObjects.map(task => {
+        const { _id, ...rest } = task;
+        // ถ้า _id เป็นค่าชั่วคราว (temp- หรือ new-) ให้ส่งโดยไม่มี _id เพื่อให้ Backend สร้าง ID จริง
+        if (_id && (_id.startsWith('temp-') || _id.startsWith('new-'))) {
+            return rest;
+        }
+        return task;
+    });
+
+    onCreate(trimmedName, numPriority, tasksToSubmit as Task[]);
   };
 
   const handleClose = () => {
@@ -158,28 +214,30 @@ return (
     <div className="fixed inset-0 bg-white/70 bg-opacity-50 z-40 flex justify-center items-center p-4" onClick={handleClose}>
       <div
         // [✅] ขยายความกว้างเป็น max-w-4xl
-        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[100vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="p-6 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">สร้างโปรเจกต์ใหม่</h2>
-          <button onClick={handleClose} disabled={isLoading} className="text-gray-400 hover:text-gray-600 disabled:opacity-30">&times;</button>
+          <button onClick={handleClose} disabled={isLoading} className="text-gray-400 hover:text-gray-600 disabled:opacity-30 text-2xl">&times;</button>
         </header>
 
-        <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden min-h-0">
+        <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden min-h-0 flex-1">
          {/* [✅] ใช้ fieldset เพื่อ Disable ฟอร์มทั้งหมดขณะโหลด */}
-         <fieldset disabled={isLoading} className="grid grid-rows-[auto_1fr_auto] overflow-hidden flex-1">
+         {/* [✅ ปรับปรุง Layout] เปลี่ยนจาก grid-rows ที่ซับซ้อน เป็น Flexbox เพื่อการจัดการ Scroll ที่ยืดหยุ่นขึ้น */}
+         <div disabled={isLoading} className="flex flex-col overflow-hidden flex-1 min-h-0">
 
           {/* Project Details Section */}
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 border-b">
             <div className="flex gap-6">
                 <div className="flex-grow">
                     <label htmlFor="project-name" className="block text-sm font-medium text-gray-700 mb-1">ชื่อโปรเจกต์</label>
-                    <input type="text" id="project-name" value={projectName} onChange={(e) => setProjectName(e.target.value)} className={baseInputClass} placeholder="เช่น แคมเปญการตลาด Q4" required />
+                    {/* [✅ Security] เพิ่ม maxLength */}
+                    <input type="text" id="project-name" value={projectName} onChange={(e) => setProjectName(e.target.value)} className={baseInputClass} placeholder="เช่น แคมเปญการตลาด Q4" required maxLength={MAX_INPUT_LENGTH} disabled={isLoading} />
                 </div>
                 <div className="w-48">
                     <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">ความสำคัญ (0=สูง, 10=ต่ำ)</label>
-                    <input type="number" id="priority" min="0" max="10" value={priority} onChange={(e) => setPriority(e.target.value)} className={baseInputClass} placeholder="5" />
+                    <input type="number" id="priority" min="0" max={MAX_PRIORITY} value={priority} onChange={(e) => setPriority(e.target.value)} className={baseInputClass} placeholder={String(DEFAULT_PRIORITY)} disabled={isLoading} />
                 </div>
             </div>
           </div>
@@ -189,12 +247,14 @@ return (
             <div className="flex items-end gap-3">
                 <div className="flex-grow">
                     <label htmlFor="new-task-name" className="text-xs text-gray-600">ชื่อ Task</label>
-                    <input type="text" id="new-task-name" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} className={`${baseInputClass} text-sm`} placeholder="ชื่อ Task ใหม่..."/>
+                    {/* [✅ Security] เพิ่ม maxLength */}
+                    <input type="text" id="new-task-name" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} className={`${baseInputClass} text-sm`} placeholder="ชื่อ Task ใหม่..." maxLength={MAX_INPUT_LENGTH} disabled={isLoading} />
                 </div>
                  {/* [✅ เพิ่ม] ช่อง Deadline สำหรับ Task ใหม่ */}
                  <div className="w-36">
                     <label htmlFor="new-task-deadline" className="text-xs text-gray-600">Deadline</label>
-                    <input type="date" id="new-task-deadline" value={newTaskDeadline} onChange={(e) => setNewTaskDeadline(e.target.value)} className={`${baseInputClass} text-sm`}/>
+                    {/* [✅ Security] เพิ่ม min={todayDate} */}
+                    <input type="date" id="new-task-deadline" value={newTaskDeadline} onChange={(e) => setNewTaskDeadline(e.target.value)} min={todayDate} className={`${baseInputClass} text-sm`} disabled={isLoading} />
                 </div>
                 <div className="w-40">
                     <label htmlFor="new-task-owner" className="text-xs text-gray-600">Owner</label>
@@ -209,9 +269,42 @@ return (
             </div>
           </div>
 
-          {/* Task Selection Header */}
-          <div className="px-6 pb-2 border-t pt-4">
+          {/* Task Selection Header & Bulk Actions */}
+          <div className="px-6 pb-2 pt-4">
             <p className="font-semibold text-gray-800 mb-3">กำหนด Task และ Deadline ({selectedTaskIds.size}/{projectTasks.length})</p>
+            
+            {/* [⭐ ใหม่] Bulk Actions Toolbar */}
+            <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center">
+                    <input
+                        type="checkbox"
+                        id="select-all"
+                        checked={isAllSelected}
+                        onChange={handleSelectAllToggle}
+                        className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer mr-2"
+                        disabled={projectTasks.length === 0}
+                    />
+                    <label htmlFor="select-all" className="text-sm text-gray-700 cursor-pointer">เลือกทั้งหมด</label>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                    <span className="text-sm text-gray-600">ตั้ง Deadline (Bulk):</span>
+                    <div className="flex space-x-1">
+                        {BULK_DEADLINE_OPTIONS.map(days => (
+                            <button
+                                key={days}
+                                type="button"
+                                onClick={() => handleBulkDeadlineUpdate(days)}
+                                disabled={selectedTaskIds.size === 0 || isLoading}
+                                className="px-3 py-1 text-xs font-medium text-orange-600 bg-orange-100 rounded-md hover:bg-orange-200 disabled:bg-gray-200 disabled:text-gray-500 transition duration-150"
+                            >
+                                +{days} วัน
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
              {/* [✅ ปรับปรุง Layout] Header ของตาราง */}
             <div className="grid grid-cols-12 gap-3 px-3 py-2 text-xs font-medium text-gray-500 uppercase bg-gray-50 rounded-md">
                 <div className="col-span-6">Task</div>
@@ -221,14 +314,14 @@ return (
           </div>
           
 
-           {/* [✅ ปรับปรุง Layout] Task List (Scrollable) */}
-          <div className="px-6 pt-2 pb-4 overflow-y-auto border-b min-h-0 h-[calc(90vh-350px)]">
+           {/* [✅ ปรับปรุง Layout] Task List (Scrollable) - ใช้ flex-1 แทนการคำนวณความสูง */}
+          <div className="px-6 pt-2 pb-4 overflow-y-auto border-b flex-1 min-h-0">
             <div className="space-y-2">
 
               {projectTasks.map((task) => {
                 const isSelected = selectedTaskIds.has(task._id!);
                 return (
-                    <div key={task._id} className={`grid grid-cols-12 gap-3 items-center p-3 rounded-md transition-colors ${isSelected ? 'bg-white hover:bg-orange-50' : 'bg-gray-100 opacity-70'}`}>
+                    <div key={task._id} className={`grid grid-cols-12 gap-3 items-center p-3 rounded-md transition-colors border ${isSelected ? 'bg-white hover:bg-orange-50 border-gray-200' : 'bg-gray-100 opacity-70 border-transparent'}`}>
 
                         {/* Column 1: Checkbox and Task Name */}
                         <div className="col-span-6 flex items-center">
@@ -249,6 +342,8 @@ return (
                                 onChange={(e) => handleTaskDeadlineChange(task._id!, e.target.value)}
                                 // ปิดการใช้งานถ้า Task ไม่ได้ถูกเลือก หรือ กำลังโหลด
                                 disabled={!isSelected || isLoading}
+                                // [✅ Security] เพิ่ม min={todayDate}
+                                min={todayDate}
                                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-200 disabled:text-gray-500"
                             />
                         </div>
@@ -266,9 +361,7 @@ return (
             
           </div>
 
-          
-
-         </fieldset> {/* ปิด fieldset */}
+         </div> {/* ปิด fieldset */}
 
           <footer className="p-6 bg-gray-100 flex justify-end space-x-3">
             <button type="button" onClick={handleClose} disabled={isLoading} className="px-4 py-2 text-sm bg-white border rounded-md disabled:opacity-50">ยกเลิก</button>
