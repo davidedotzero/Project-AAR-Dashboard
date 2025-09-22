@@ -4,9 +4,7 @@ import {
   ownerOptions,
   statusOptions,
   statusColorMap,
-  // timelinessOptions, impactScoreOptions, phaseColorMap, // ไม่ได้ใช้
 } from "../constants";
-// import { FileUpload } from "./FileUpload"; // ไม่ได้ใช้
 import { ArrowLeftIcon, ArrowRightIcon } from "./icons";
 import { useData } from "../contexts/DataContext";
 
@@ -33,13 +31,10 @@ const calculateLeadTime = (deadline?: string, requestDate?: string): string => {
   return `${diffDays} วัน`;
 };
 
-// Helper สำหรับสร้าง Timestamp (รูปแบบ Localized)
 const getTimestamp = (): string => {
-    // ใช้ Locale th-TH เพื่อให้แสดงวันที่และเวลาเป็นภาษาไทย/รูปแบบที่คุ้นเคย
     return new Date().toLocaleString('th-TH');
 };
 
-// Helper สำหรับสร้าง YYYY-MM-DD (สำหรับ input date)
 const getISODateString = (date: Date): string => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
@@ -95,7 +90,6 @@ const FormField: React.FC<{ label: string; children: React.ReactNode }> = ({
   </div>
 );
 
-// LinkIcon ถูกละไว้เนื่องจากไม่ได้ใช้ในโค้ดส่วนนี้ที่แสดง
 
 // --- Component ย่อยสำหรับแสดงผลในโหมด View เท่านั้น (เหมือนเดิม) ---
 const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
@@ -175,7 +169,6 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
         </DetailItem>
 
         <DetailItem label="Notes / Result (Log)">
-          {/* whitespace-pre-wrap จำเป็นสำหรับการแสดงการขึ้นบรรทัดใหม่ของ Log */}
           <p className="p-3 bg-gray-50 rounded-md border min-h-[100px] whitespace-pre-wrap">
             {task["Notes / Result"] || "-"}
           </p>
@@ -211,7 +204,6 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const [formData, setFormData] = useState<Task | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  // State สำหรับเก็บเหตุผลการอัปเดตชั่วคราว
   const [updateReason, setUpdateReason] = useState("");
 
   const { projects } = useData();
@@ -219,7 +211,6 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   // useEffect (เหมือนเดิม)
   useEffect(() => {
     if (task) {
-      // Format ข้อมูลเริ่มต้นสำหรับ input (Normalize null เป็น "")
       const formattedTask = {
         ...task,
         Deadline: task.Deadline || "",
@@ -228,9 +219,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
         "Notes / Result": task["Notes / Result"] || "",
       };
       setFormData(formattedTask);
-      // บังคับเป็นโหมดดูอย่างเดียวเสมอเมื่อ Task เปลี่ยน
       setIsEditing(false);
-      // Reset เหตุผล
       setUpdateReason("");
     }
   }, [task]);
@@ -240,8 +229,6 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
     if (!task || !formData || !isEditing) {
         return { requiresReason: false, isDeadlineChanged: false, isStatusChanged: false };
     }
-
-    // เปรียบเทียบค่า โดยจัดการกับค่า null/undefined ให้เป็น ""
     const isDeadlineChanged = (formData.Deadline || "") !== (task.Deadline || "");
     const isStatusChanged = formData.Status !== task.Status;
 
@@ -302,10 +289,8 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
     // 2. Logging
     if (requiresReason || trimmedReason) {
         const timestamp = getTimestamp();
-        // ใช้ \n\n เพื่อเว้นบรรทัดใหม่ 2 ครั้งก่อนเริ่ม Log
         let logEntry = `\n\n--- [อัปเดตเมื่อ ${timestamp}] ---\n`;
 
-        // เพิ่มสรุปการเปลี่ยนแปลง (ถ้ามี)
         if (isStatusChanged) {
             logEntry += `* เปลี่ยน Status: "${task.Status}" -> "${formData.Status}"\n`;
         }
@@ -313,7 +298,6 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
             logEntry += `* เปลี่ยน Deadline: "${formatDateToDDMMYYYY(task.Deadline)}" -> "${formatDateToDDMMYYYY(formData.Deadline)}"\n`;
         }
         
-        // เพิ่มรายละเอียด/เหตุผล (ถ้ามี)
         if (trimmedReason) {
             logEntry += `รายละเอียด/เหตุผล: ${trimmedReason}\n`;
         }
@@ -321,7 +305,6 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
         // 3. Appending Logic
         const existingNotes = formData["Notes / Result"] || "";
-        // ถ้ามี Notes เดิม ให้ต่อท้าย, ถ้าไม่มี ให้ใช้ Log เลย (โดยตัด \n\n ด้านหน้าออก)
         finalFormData["Notes / Result"] = existingNotes ? `${existingNotes}${logEntry}` : logEntry.trimStart();
     }
 
@@ -330,10 +313,9 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
     setIsSaving(true);
     try {
       await onSave(finalFormData);
-      // Optimistic Update
       setFormData(finalFormData); 
-      setIsEditing(false); // กลับสู่โหมด View
-      setUpdateReason(""); // Clear เหตุผล
+      setIsEditing(false);
+      setUpdateReason("");
     } catch (error) {
       console.error("Failed to save task:", error);
     } finally {
@@ -343,7 +325,6 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
   // handleCancelEdit (เหมือนเดิม)
   const handleCancelEdit = () => {
-    // Reset form data to original task data
     if (task) {
         const formattedTask = {
             ...task,
@@ -355,7 +336,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
       setFormData(formattedTask);
     }
     setIsEditing(false);
-    setUpdateReason(""); // Reset เหตุผล
+    setUpdateReason("");
   };
   
   const helpLeadTime = useMemo(() => {
@@ -404,7 +385,6 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
         </header>
         
         {/* Content (Scrollable) */}
-        {/* ใช้ <form> ครอบคลุม และจัดการ Layout ด้วย min-h-0 */}
         <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden flex-1 min-h-0">
             <div className="overflow-y-auto flex-1">
             {currentModeIsView ? (
@@ -490,7 +470,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                                 value={formData.HelpRequestedAt || ""}
                                 onChange={handleChange}
                                 className={`${baseInputClass} bg-gray-200`}
-                                readOnly // ทำให้ Read-only เพราะถูกตั้งค่าอัตโนมัติ
+                                readOnly
                                 />
                             </FormField>
                             <FormField label="ขอความช่วยเหลือล่วงหน้า">
@@ -546,14 +526,12 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
                     {/* ช่องสำหรับกรอกรายละเอียดการอัปเดต/เหตุผล */}
                     <div className="md:col-span-2 mt-4">
-                        {/* แสดงกรอบและสีพื้นหลังตามความจำเป็น */}
                         <div className={`p-4 rounded-lg border transition-colors duration-200 ${requiresReason ? 'bg-yellow-50 border-yellow-400 shadow-md' : 'bg-gray-50 border-gray-200'}`}>
                             <FormField label={`รายละเอียดการอัปเดต ${requiresReason ? '(จำเป็นต้องกรอก*)' : '(ถ้ามี)'}`}>
                                 <textarea
                                     name="updateReason"
                                     value={updateReason}
                                     onChange={(e) => setUpdateReason(e.target.value)}
-                                    // เน้นขอบถ้าจำเป็นต้องกรอก
                                     className={`${baseInputClass} transition-colors duration-200 ${requiresReason ? 'border-yellow-500 focus:ring-yellow-500 focus:border-yellow-500' : ''}`}
                                     rows={4}
                                     placeholder={requiresReason ? "กรุณาระบุเหตุผลเนื่องจากมีการเปลี่ยนแปลง Deadline หรือ Status..." : "ระบุรายละเอียดการเปลี่ยนแปลงอื่นๆ..."}
@@ -573,7 +551,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                             onChange={handleChange}
                             className={`${baseInputClass} bg-gray-100`}
                             rows={5}
-                            readOnly // ทำให้ Read Only เพื่อบังคับใช้การบันทึกผ่านช่องด้านบน
+                            readOnly
                             placeholder="ประวัติการอัปเดตจะแสดงที่นี่..."
                         />
                         </FormField>
@@ -586,7 +564,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
             {/* Footer */}
             <footer className="flex justify-between items-center p-6 border-t bg-gray-50 rounded-b-xl">
             <div>
-                {/* ปุ่ม Navigation ต้องเป็น type="button" เพราะอยู่ใน <form> */}
+                {/* ปุ่ม Navigation */}
                 <button
                 type="button"
                 onClick={() => onNavigate('previous')}
@@ -619,10 +597,10 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                     {!isViewOnly && (
                     <button
                         type="button"
-                        // [⭐ BUG FIX] เปลี่ยนจาก onClick เป็น onMouseDown เพื่อป้องกัน Race Condition
-                        onMouseDown={(e) => {
-                            e.preventDefault(); // ป้องกัน side effects เช่นการ Focus ก่อนปุ่มหายไป
-                            setIsEditing(true);
+                        // [⭐ BUG FIX] ใช้ onClick + setTimeout(0) เพื่อป้องกัน Race Condition ในทุกกรณี (รวมถึง "Help Me")
+                        onClick={() => {
+                            // เลื่อนการเปลี่ยน State ออกไป เพื่อให้ Event Loop นี้จบก่อน
+                            setTimeout(() => setIsEditing(true), 0);
                         }}
                         disabled={isLoading}
                         className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none disabled:bg-gray-400"
@@ -642,9 +620,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                     ยกเลิก
                     </button>
                     <button
-                    // ใช้ type="submit"
                     type="submit"
-                    // Disable ปุ่มหากจำเป็นต้องกรอกเหตุผล แต่ยังไม่ได้กรอก
                     disabled={isLoading || isSaving || (requiresReason && !updateReason.trim())}
                     className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
