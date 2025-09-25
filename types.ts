@@ -52,6 +52,7 @@ export interface Task {
   HelpDetails?: string | null;
   HelpRequestedAt?: string | null;
   Attachment?: string | null;
+  UpdatedAt?: string;
 }
 
 export interface HistoryEntry {

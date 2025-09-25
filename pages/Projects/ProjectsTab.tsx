@@ -72,7 +72,16 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
 
       <div className="flex flex-col gap-4">
         {sortedProjects.map((p) => {
+          const projectTasks = allTasks.filter(task => task.ProjectID === p.ProjectID);
           const taskCount = allTasks.filter(task => task.ProjectID === p.ProjectID).length;
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+          const recentlyUpdatedCount = projectTasks.filter(task => {
+              if (!task.UpdatedAt) return false;
+              const updatedAtDate = new Date(task.UpdatedAt);
+              return updatedAtDate >= sevenDaysAgo;
+          }).length;
           return (
             <div
               key={p.ProjectID}
@@ -89,6 +98,11 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 <div className="text-right">
                   <span className="text-2xl font-bold text-gray-700">{taskCount}</span>
                   <span className="text-sm text-gray-500 ml-1">Tasks</span>
+                  {recentlyUpdatedCount > 0 && (
+                        <p className="text-xs text-green-600 font-semibold mt-1">
+                            Updated {recentlyUpdatedCount} tasks this week
+                        </p>
+                    )}
                 </div>
               </div>
               <div className="flex items-center justify-between mt-4">

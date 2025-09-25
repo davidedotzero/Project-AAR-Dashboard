@@ -191,6 +191,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         HelpAssignee: t.HelpAssignee || null,
         HelpDetails: t.HelpDetails || null,
         HelpRequestedAt: formatToLocalISODate(t.HelpRequestedAt) || null,
+        UpdatedAt: formatToLocalISODate(t.UpdatedAt) || null,
       }));
     },
     [phaseOrder]
