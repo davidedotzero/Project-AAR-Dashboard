@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import type { Project, Task } from "@/types";
 import { DeleteIcon, EditIcon } from "@/components/icons";
 import { useUI } from '@/contexts/UIContext';
@@ -88,7 +88,9 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
               className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500 hover:shadow-lg transition-shadow duration-300 cursor-pointer"
               onClick={() => navigate(`/tasks/${p.Name}`)}
             >
-              <div className="flex justify-between items-start">
+              <Link to={`/tasks/${p.Name}`} className="absolute inset-0 z-0" aria-label={`View project ${p.Name}`}></Link>
+
+              <div className="flex justify-between items-start relative z-10">
                 <div className="flex-1 pr-4">
                   <h3 className="font-bold text-lg text-gray-800 flex-1 pr-4">
                     {p.Name}
@@ -99,13 +101,17 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                   <span className="text-2xl font-bold text-gray-700">{taskCount}</span>
                   <span className="text-sm text-gray-500 ml-1">Tasks</span>
                   {recentlyUpdatedCount > 0 && (
-                        <p className="text-xs text-green-600 font-semibold mt-1">
+                        <Link
+                            to={`/tasks/${p.Name}?filter=recent`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="block text-lg text-green-600 font-semibold mt-1 hover:underline cursor-pointer"
+                        >
                             Updated {recentlyUpdatedCount} tasks this week
-                        </p>
+                        </Link>
                     )}
                 </div>
               </div>
-              <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center justify-between mt-4 relative z-10">
 
                 {userIsAdmin && (
                   <div className="flex items-center space-x-1">

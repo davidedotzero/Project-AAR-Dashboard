@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import type { Task } from "@/types";
 import { statusColorMap, ownerOptions, statusOptions } from "@/constants";
 import { EditIcon, ViewIcon, DeleteIcon } from "@/components/icons";
@@ -146,6 +146,8 @@ export const TasksTab: React.FC<TasksTabProps> = ({
   onBulkUpdateDeadline,
 }) => {
   const { projectName } = useParams<{ projectName: string }>();
+  const [searchParams] = useSearchParams();
+  const filterMode = searchParams.get("filter") || "";
   const { user } = useAuth(); // [✅ เพิ่ม]
   const [ownerFilter, setOwnerFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -247,6 +249,17 @@ export const TasksTab: React.FC<TasksTabProps> = ({
     const warningDate = getWarningDateYYYYMMDD(10);
 
     let tasksToProcess = tasks;
+
+    if (filterMode === 'recent') {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        tasksToProcess = tasksToProcess.filter(task => {
+            if (!task.UpdatedAt) return false;
+            const updatedAtDate = new Date(task.UpdatedAt);
+            return updatedAtDate >= sevenDaysAgo;
+        });
+    }
 
     if (activeStatFilter) {
       const incomplete = tasks.filter(
@@ -404,6 +417,20 @@ export const TasksTab: React.FC<TasksTabProps> = ({
 
   return (
     <div className="space-y-6">
+      {filterMode === 'recent' && (
+        <div className="p-4 bg-green-50 border-l-4 border-green-500 rounded-r-lg flex justify-between items-center">
+          <div>
+            <h3 className="font-bold text-green-800">แสดงเฉพาะ Task ที่อัปเดตล่าสุดใน 7 วัน</h3>
+            <p className="text-sm text-green-700">Displaying tasks that have been updated in the last 7 days.</p>
+          </div>
+          <Link 
+            to={`/tasks/${projectName}`} 
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            Clear Filter
+          </Link>
+        </div>
+      )}
       {/* KPIs Summary Section */}
       <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="flex justify-between items-center mb-3">
