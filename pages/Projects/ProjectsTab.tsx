@@ -88,7 +88,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
               className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500 hover:shadow-lg transition-shadow duration-300 cursor-pointer"
               onClick={() => navigate(`/tasks/${p.Name}`)}
             >
-              <Link to={`/tasks/${p.Name}`} className="absolute inset-0 z-0" aria-label={`View project ${p.Name}`}></Link>
+              {/* <Link to={`/tasks/${p.Name}`} className="absolute inset-0 z-0" aria-label={`View project ${p.Name}`}></Link> */}
 
               <div className="flex justify-between items-start relative z-10">
                 <div className="flex-1 pr-4">
