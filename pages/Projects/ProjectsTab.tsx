@@ -36,7 +36,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
 
   // Then, sort the filtered projects by priority
   const sortedProjects = useMemo(() => {
-    return [...filteredProjects].sort((a, b) => a.Priority - b.Priority);
+    return [...filteredProjects].reverse();
   }, [filteredProjects]);
 
   return (
