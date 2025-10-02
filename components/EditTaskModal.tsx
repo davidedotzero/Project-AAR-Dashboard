@@ -62,7 +62,7 @@ const AssigneeLabels: React.FC<{ text: string | null | undefined }> = ({ text })
             </span>
           );
         }
-        return null;
+        return <span key={index}>{part.trim()}</span>;;
       })}
     </div>
   );
