@@ -32,13 +32,80 @@ const calculateLeadTime = (deadline?: string, requestDate?: string): string => {
 };
 
 const getTimestamp = (): string => {
-    return new Date().toLocaleString('th-TH');
+  return new Date().toLocaleString('th-TH');
 };
 
 const getISODateString = (date: Date): string => {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
+const formatAndReverseLog = (logText: string | null | undefined) => {
+  // --- ค่าเริ่มต้นกรณีไม่มี Log ---
+  if (!logText || logText.trim() === "") {
+    return {
+      totalLogs: 0,
+      todayLogs: 0,
+      summaryText: "ยังไม่มีประวัติการอัปเดต",
+      formattedLog: "-",
+    };
+  }
+
+  const logSeparator = "--- [อัปเดตเมื่อ";
+  const logEntries = logText.split(logSeparator);
+
+  // --- ดึงวันที่ปัจจุบัน (แบบไม่มีเวลา) สำหรับเปรียบเทียบ ---
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const cleanedEntries = logEntries
+    .filter(entry => entry.trim() !== "")
+    .map(entry => {
+      // เพิ่มตัวแบ่งที่หายไปกลับเข้าไป
+      let content = logSeparator + entry;
+      content = content.replace(/---+\s*$/, '').trim();
+
+      // --- ดึงข้อมูลวันที่จาก Log Entry ---
+      const timestampMatch = entry.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+      let logDate: Date | null = null;
+      if (timestampMatch) {
+        const [day, month, year] = timestampMatch[1].split('/');
+        // ปี พ.ศ. - 543 = ปี ค.ศ.
+        logDate = new Date(parseInt(year) - 543, parseInt(month) - 1, parseInt(day));
+        logDate.setHours(0, 0, 0, 0);
+      }
+
+      return {
+        content: content,
+        isToday: logDate?.getTime() === today.getTime(),
+      };
+    });
+
+  // --- กลับลำดับเพื่อให้ล่าสุดอยู่บน ---
+  const reversedEntries = cleanedEntries.reverse();
+  const totalLogs = reversedEntries.length;
+  const todayLogs = reversedEntries.filter(entry => entry.isToday).length;
+
+  // --- สร้างข้อความ Log พร้อม Emoji ---
+  const formattedLog = reversedEntries
+    .map((entry, index) => {
+      const emoji = index === 0 ? '✅' : '🔵'; // อันแรกสุดคืออันใหม่สุด
+      return `${emoji}${entry.content}`;
+    })
+    .join('\n\n');
+
+  // --- สร้างข้อความสรุป ---
+  let summaryText = `อัปเดตทั้งหมด ${totalLogs} ครั้ง`;
+  if (todayLogs > 0) {
+    summaryText += ` (วันนี้ ${todayLogs} ครั้ง)`;
+  }
+
+  return {
+    totalLogs,
+    todayLogs,
+    summaryText,
+    formattedLog,
+  };
+};
 
 // --- Helper Components (เหมือนเดิม) ---
 
@@ -101,33 +168,35 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
     return projects.find(p => p.ProjectID === task.ProjectID);
   }, [task, projects]);
 
+  const logInfo = formatAndReverseLog(task["Notes / Result"]);
+
   return (
     <div className="p-8 space-y-8">
       {/* === Section: รายละเอียดหลัก === */}
       <div className="pb-6 border-b">
         <div className="md:col-span-2 mb-6">
-            <DetailItem label="Task">
-              <p className="text-xl font-bold text-gray-800">{task.Task || "-"}</p>
-              <strong>ของ Project:</strong>
-              <p>{selectedProject ? selectedProject.Name : `(${task.ProjectID})`}</p>
-            </DetailItem>
+          <DetailItem label="Task">
+            <p className="text-xl font-bold text-gray-800">{task.Task || "-"}</p>
+            <strong>ของ Project:</strong>
+            <p>{selectedProject ? selectedProject.Name : `(${task.ProjectID})`}</p>
+          </DetailItem>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            <DetailItem label="Owner">
-              <span className="px-2.5 py-1 text-sm font-semibold text-orange-800 bg-orange-100 rounded-full">
-                {task.Owner}
-              </span>
-            </DetailItem>
+          <DetailItem label="Owner">
+            <span className="px-2.5 py-1 text-sm font-semibold text-orange-800 bg-orange-100 rounded-full">
+              {task.Owner}
+            </span>
+          </DetailItem>
 
-            <DetailItem label="Status">
-              <p className={`font-bold text-base ${statusColorMap[task.Status] || 'text-gray-500'}`}>
-                {task.Status}
-              </p>
-            </DetailItem>
+          <DetailItem label="Status">
+            <p className={`font-bold text-base ${statusColorMap[task.Status] || 'text-gray-500'}`}>
+              {task.Status}
+            </p>
+          </DetailItem>
 
-            <DetailItem label="Deadline">
-              <p className="text-base">{formatDateToDDMMYYYY(task.Deadline)}</p>
-            </DetailItem>
+          <DetailItem label="Deadline">
+            <p className="text-base">{formatDateToDDMMYYYY(task.Deadline)}</p>
+          </DetailItem>
         </div>
       </div>
 
@@ -165,13 +234,17 @@ const TaskDetailsView: React.FC<{ task: Task }> = ({ task }) => {
       {/* === Section: Feedback และผลลัพธ์ === */}
       <div className="grid grid-cols-1 gap-y-6">
         <DetailItem label="ผู้ปฏิบัติงาน (To Team)">
-            <AssigneeLabels text={task["Feedback to Team"]} />
+          <AssigneeLabels text={task["Feedback to Team"]} />
         </DetailItem>
 
         <DetailItem label="Notes / Result (Log)">
-          <p className="p-3 bg-gray-50 rounded-md border min-h-[100px] whitespace-pre-wrap">
-            {task["Notes / Result"] || "-"}
-          </p>
+          <p className="text-sm text-gray-600 mb-2 font-medium">
+        {logInfo.summaryText}
+      </p>
+
+          <div className="p-3 bg-gray-50 rounded-md border min-h-[100px] whitespace-pre-wrap">
+            {logInfo.formattedLog}
+          </div>
         </DetailItem>
       </div>
     </div>
@@ -227,15 +300,15 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   // Logic การตรวจสอบการเปลี่ยนแปลง (Change Detection) (เหมือนเดิม)
   const { requiresReason, isDeadlineChanged, isStatusChanged } = useMemo(() => {
     if (!task || !formData || !isEditing) {
-        return { requiresReason: false, isDeadlineChanged: false, isStatusChanged: false };
+      return { requiresReason: false, isDeadlineChanged: false, isStatusChanged: false };
     }
     const isDeadlineChanged = (formData.Deadline || "") !== (task.Deadline || "");
     const isStatusChanged = formData.Status !== task.Status;
 
     return {
-        requiresReason: isDeadlineChanged || isStatusChanged,
-        isDeadlineChanged,
-        isStatusChanged,
+      requiresReason: isDeadlineChanged || isStatusChanged,
+      isDeadlineChanged,
+      isStatusChanged,
     };
   }, [task, formData, isEditing]);
 
@@ -280,32 +353,32 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
     // 1. Validation
     if (requiresReason && !trimmedReason) {
-        alert("Deadline หรือ Status มีการเปลี่ยนแปลง กรุณากรอกเหตุผล/รายละเอียดการอัปเดตในช่องที่กำหนด");
-        return;
+      alert("Deadline หรือ Status มีการเปลี่ยนแปลง กรุณากรอกเหตุผล/รายละเอียดการอัปเดตในช่องที่กำหนด");
+      return;
     }
 
     let finalFormData = { ...formData };
 
     // 2. Logging
     if (requiresReason || trimmedReason) {
-        const timestamp = getTimestamp();
-        let logEntry = `\n\n--- [อัปเดตเมื่อ ${timestamp}] ---\n`;
+      const timestamp = getTimestamp();
+      let logEntry = `--- [อัปเดตเมื่อ ${timestamp}]\n`;
 
-        if (isStatusChanged) {
-            logEntry += `* เปลี่ยน Status: "${task.Status}" -> "${formData.Status}"\n`;
-        }
-        if (isDeadlineChanged) {
-            logEntry += `* เปลี่ยน Deadline: "${formatDateToDDMMYYYY(task.Deadline)}" -> "${formatDateToDDMMYYYY(formData.Deadline)}"\n`;
-        }
-        
-        if (trimmedReason) {
-            logEntry += `รายละเอียด/เหตุผล: ${trimmedReason}\n`;
-        }
-        logEntry += `----------------------------------------`;
 
-        // 3. Appending Logic
-        const existingNotes = formData["Notes / Result"] || "";
-        finalFormData["Notes / Result"] = existingNotes ? `${existingNotes}${logEntry}` : logEntry.trimStart();
+      if (isStatusChanged) {
+        logEntry += `* เปลี่ยน Status: "${task.Status}" -> "${formData.Status}"\n`;
+      }
+      if (isDeadlineChanged) {
+        logEntry += `* เปลี่ยน Deadline: "${formatDateToDDMMYYYY(task.Deadline)}" -> "${formatDateToDDMMYYYY(formData.Deadline)}"\n`;
+      }
+
+      if (trimmedReason) {
+        logEntry += `รายละเอียด/เหตุผล: ${trimmedReason}\n`;
+      }
+
+      // 3. Appending Logic
+      const existingNotes = formData["Notes / Result"] || "";
+      finalFormData["Notes / Result"] = existingNotes ? `${existingNotes}\n\n${logEntry}` : logEntry;
     }
 
 
@@ -313,7 +386,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
     setIsSaving(true);
     try {
       await onSave(finalFormData);
-      setFormData(finalFormData); 
+      setFormData(finalFormData);
       setIsEditing(false);
       setUpdateReason("");
     } catch (error) {
@@ -326,23 +399,23 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   // handleCancelEdit (เหมือนเดิม)
   const handleCancelEdit = () => {
     if (task) {
-        const formattedTask = {
-            ...task,
-            Deadline: task.Deadline || "",
-            HelpRequestedAt: task.HelpRequestedAt || "",
-            AttachmentLink: task.AttachmentLink || "",
-            "Notes / Result": task["Notes / Result"] || "",
-          };
+      const formattedTask = {
+        ...task,
+        Deadline: task.Deadline || "",
+        HelpRequestedAt: task.HelpRequestedAt || "",
+        AttachmentLink: task.AttachmentLink || "",
+        "Notes / Result": task["Notes / Result"] || "",
+      };
       setFormData(formattedTask);
     }
     setIsEditing(false);
     setUpdateReason("");
   };
-  
+
   const helpLeadTime = useMemo(() => {
     return calculateLeadTime(formData?.Deadline, formData?.HelpRequestedAt);
   }, [formData?.Deadline, formData?.HelpRequestedAt]);
-  
+
   const selectedProject = useMemo(() => {
     if (!task || !projects) return null;
     return projects.find(p => p.ProjectID === task.ProjectID);
@@ -360,6 +433,8 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   };
 
   const currentModeIsView = isViewOnly || !isEditing;
+
+  const logInfo = formatAndReverseLog(formData["Notes / Result"]);
 
   return (
     <div
@@ -383,253 +458,257 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
             &times;
           </button>
         </header>
-        
+
         {/* Content (Scrollable) */}
         <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden flex-1 min-h-0">
-            <div className="overflow-y-auto flex-1">
+          <div className="overflow-y-auto flex-1">
             {currentModeIsView ? (
-                <TaskDetailsView task={formData} />
+              <TaskDetailsView task={formData} />
             ) : (
-                
-                <fieldset disabled={isLoading || isSaving}>
-                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                    
-                    {/* ... (ส่วน Form Fields ทั้งหมดเหมือนเดิม) ... */}
 
-                    <div className="md:col-span-2 mb-4">
+              <fieldset disabled={isLoading || isSaving}>
+                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+
+                  {/* ... (ส่วน Form Fields ทั้งหมดเหมือนเดิม) ... */}
+
+                  <div className="md:col-span-2 mb-4">
                     <strong>ของ Project:</strong>
                     <p>{selectedProject ? selectedProject.Name : `(${task.ProjectID})`}</p>
-                    </div>
-                    <div className="md:col-span-2">
-                        <FormField label="Task">
-                        <input
-                            type="text"
-                            name="Task"
-                            value={formData.Task}
-                            onChange={handleChange}
-                            className={baseInputClass}
-                            required
-                        />
-                        </FormField>
-                    </div>
-
-                    <FormField label="Owner">
-                        <select
-                        name="Owner"
-                        value={formData.Owner}
+                  </div>
+                  <div className="md:col-span-2">
+                    <FormField label="Task">
+                      <input
+                        type="text"
+                        name="Task"
+                        value={formData.Task}
                         onChange={handleChange}
                         className={baseInputClass}
-                        >
-                        {ownerOptions.map((opt) => (
-                            <option key={opt} value={opt}>
-                            {opt}
-                            </option>
-                        ))}
-                        </select>
+                        required
+                      />
                     </FormField>
+                  </div>
 
-                    <FormField label="Deadline">
-                        <input
-                        type="date"
-                        name="Deadline"
-                        value={formData.Deadline || ""}
-                        onChange={handleChange}
-                        className={baseInputClass}
-                        />
-                    </FormField>
+                  <FormField label="Owner">
+                    <select
+                      name="Owner"
+                      value={formData.Owner}
+                      onChange={handleChange}
+                      className={baseInputClass}
+                    >
+                      {ownerOptions.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
 
-                    <FormField label="Status">
-                        <select
-                        name="Status"
-                        value={formData.Status}
-                        onChange={handleChange}
-                        className={baseInputClass}
-                        >
-                        {statusOptions.map((opt) => (
-                            <option key={opt} value={opt}>
-                            {opt}
-                            </option>
-                        ))}
-                        </select>
-                    </FormField>
+                  <FormField label="Deadline">
+                    <input
+                      type="date"
+                      name="Deadline"
+                      value={formData.Deadline || ""}
+                      onChange={handleChange}
+                      className={baseInputClass}
+                    />
+                  </FormField>
 
-                    {/* Spacer */}
-                    {formData.Status !== "Help Me" && (
-                        <div className="hidden md:block"></div>
-                    )}
+                  <FormField label="Status">
+                    <select
+                      name="Status"
+                      value={formData.Status}
+                      onChange={handleChange}
+                      className={baseInputClass}
+                    >
+                      {statusOptions.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
 
-                    {/* +++ START: Conditional "Help Me" Section +++ (โค้ดเดิม) */}
-                    {formData.Status === "Help Me" && (
-                        <>
-                        <div className="md:col-span-2 p-4 bg-purple-50 border-l-4 border-purple-400 rounded-r-lg">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
-                            <FormField label="วันที่ร้องขอความช่วยเหลือ">
-                                <input
-                                type="date"
-                                name="HelpRequestedAt"
-                                value={formData.HelpRequestedAt || ""}
-                                onChange={handleChange}
-                                className={`${baseInputClass} bg-gray-200`}
-                                readOnly
-                                />
-                            </FormField>
-                            <FormField label="ขอความช่วยเหลือล่วงหน้า">
-                                <div className="mt-1 px-3 py-2 bg-gray-200 rounded-md text-sm font-bold text-purple-800 h-full flex items-center">
-                                {helpLeadTime}
-                                </div>
-                            </FormField>
-                            <FormField label="ผู้ช่วยเหลือ (Help Assignee)">
-                                <select
-                                name="HelpAssignee"
-                                value={formData.HelpAssignee || ""}
+                  {/* Spacer */}
+                  {formData.Status !== "Help Me" && (
+                    <div className="hidden md:block"></div>
+                  )}
+
+                  {/* +++ START: Conditional "Help Me" Section +++ (โค้ดเดิม) */}
+                  {formData.Status === "Help Me" && (
+                    <>
+                      <div className="md:col-span-2 p-4 bg-purple-50 border-l-4 border-purple-400 rounded-r-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
+                          <FormField label="วันที่ร้องขอความช่วยเหลือ">
+                            <input
+                              type="date"
+                              name="HelpRequestedAt"
+                              value={formData.HelpRequestedAt || ""}
+                              onChange={handleChange}
+                              className={`${baseInputClass} bg-gray-200`}
+                              readOnly
+                            />
+                          </FormField>
+                          <FormField label="ขอความช่วยเหลือล่วงหน้า">
+                            <div className="mt-1 px-3 py-2 bg-gray-200 rounded-md text-sm font-bold text-purple-800 h-full flex items-center">
+                              {helpLeadTime}
+                            </div>
+                          </FormField>
+                          <FormField label="ผู้ช่วยเหลือ (Help Assignee)">
+                            <select
+                              name="HelpAssignee"
+                              value={formData.HelpAssignee || ""}
+                              onChange={handleChange}
+                              className={`${baseInputClass} border-purple-300`}
+                            >
+                              <option value="">-- เลือกทีม --</option>
+                              {ownerOptions.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </FormField>
+                          <div className="md:col-span-3">
+                            <FormField label="รายละเอียดการร้องขอ">
+                              <textarea
+                                name="HelpDetails"
+                                value={formData.HelpDetails || ""}
                                 onChange={handleChange}
                                 className={`${baseInputClass} border-purple-300`}
-                                >
-                                <option value="">-- เลือกทีม --</option>
-                                {ownerOptions.map((opt) => (
-                                    <option key={opt} value={opt}>
-                                    {opt}
-                                    </option>
-                                ))}
-                                </select>
+                                rows={3}
+                                placeholder="อธิบายปัญหาที่ต้องการความช่วยเหลือ..."
+                              ></textarea>
                             </FormField>
-                            <div className="md:col-span-3">
-                                <FormField label="รายละเอียดการร้องขอ">
-                                <textarea
-                                    name="HelpDetails"
-                                    value={formData.HelpDetails || ""}
-                                    onChange={handleChange}
-                                    className={`${baseInputClass} border-purple-300`}
-                                    rows={3}
-                                    placeholder="อธิบายปัญหาที่ต้องการความช่วยเหลือ..."
-                                ></textarea>
-                                </FormField>
-                            </div>
-                            </div>
+                          </div>
                         </div>
-                        </>
-                    )}
-                    {/* +++ END: Conditional "Help Me" Section +++ */}
-                    
-                    <div className="md:col-span-2">
-                        <FormField label="ผู้ปฏิบัติงาน (To Team)">
-                        <input
-                            type="text"
-                            name="Feedback to Team"
-                            value={formData["Feedback to Team"] ?? ""}
-                            onChange={handleChange}
-                            className={baseInputClass}
-                            placeholder="เช่น @TeamA #Tag"
-                        />
-                        </FormField>
-                    </div>
+                      </div>
+                    </>
+                  )}
+                  {/* +++ END: Conditional "Help Me" Section +++ */}
 
-                    {/* ช่องสำหรับกรอกรายละเอียดการอัปเดต/เหตุผล */}
-                    <div className="md:col-span-2 mt-4">
-                        <div className={`p-4 rounded-lg border transition-colors duration-200 ${requiresReason ? 'bg-yellow-50 border-yellow-400 shadow-md' : 'bg-gray-50 border-gray-200'}`}>
-                            <FormField label={`รายละเอียดการอัปเดต ${requiresReason ? '(จำเป็นต้องกรอก*)' : '(ถ้ามี)'}`}>
-                                <textarea
-                                    name="updateReason"
-                                    value={updateReason}
-                                    onChange={(e) => setUpdateReason(e.target.value)}
-                                    className={`${baseInputClass} transition-colors duration-200 ${requiresReason ? 'border-yellow-500 focus:ring-yellow-500 focus:border-yellow-500' : ''}`}
-                                    rows={4}
-                                    placeholder={requiresReason ? "กรุณาระบุเหตุผลเนื่องจากมีการเปลี่ยนแปลง Deadline หรือ Status..." : "ระบุรายละเอียดการเปลี่ยนแปลงอื่นๆ..."}
-                                />
-                            </FormField>
-                            <p className={`text-sm mt-2 transition-colors duration-200 ${requiresReason ? 'text-yellow-700 font-medium' : 'text-gray-500'}`}>
-                                * ข้อมูลนี้จะถูกบันทึกลงใน Notes / Result โดยอัตโนมัติเมื่อกดบันทึก
-                            </p>
-                        </div>
-                    </div>
+                  <div className="md:col-span-2">
+                    <FormField label="ผู้ปฏิบัติงาน (To Team)">
+                      <input
+                        type="text"
+                        name="Feedback to Team"
+                        value={formData["Feedback to Team"] ?? ""}
+                        onChange={handleChange}
+                        className={baseInputClass}
+                        placeholder="เช่น @TeamA #Tag"
+                      />
+                    </FormField>
+                  </div>
 
-                    <div className="md:col-span-2 mt-4">
-                        <FormField label="Notes / Result (Log)">
+                  {/* ช่องสำหรับกรอกรายละเอียดการอัปเดต/เหตุผล */}
+                  <div className="md:col-span-2 mt-4">
+                    <div className={`p-4 rounded-lg border transition-colors duration-200 ${requiresReason ? 'bg-yellow-50 border-yellow-400 shadow-md' : 'bg-gray-50 border-gray-200'}`}>
+                      <FormField label={`รายละเอียดการอัปเดต ${requiresReason ? '(จำเป็นต้องกรอก*)' : '(ถ้ามี)'}`}>
                         <textarea
-                            name="Notes / Result"
-                            value={formData["Notes / Result"] ?? ""}
-                            onChange={handleChange}
-                            className={`${baseInputClass} bg-gray-100`}
-                            rows={5}
-                            readOnly
-                            placeholder="ประวัติการอัปเดตจะแสดงที่นี่..."
+                          name="updateReason"
+                          value={updateReason}
+                          onChange={(e) => setUpdateReason(e.target.value)}
+                          className={`${baseInputClass} transition-colors duration-200 ${requiresReason ? 'border-yellow-500 focus:ring-yellow-500 focus:border-yellow-500' : ''}`}
+                          rows={4}
+                          placeholder={requiresReason ? "กรุณาระบุเหตุผลเนื่องจากมีการเปลี่ยนแปลง Deadline หรือ Status..." : "ระบุรายละเอียดการเปลี่ยนแปลงอื่นๆ..."}
                         />
-                        </FormField>
+                      </FormField>
+                      <p className={`text-sm mt-2 transition-colors duration-200 ${requiresReason ? 'text-yellow-700 font-medium' : 'text-gray-500'}`}>
+                        * ข้อมูลนี้จะถูกบันทึกลงใน Notes / Result โดยอัตโนมัติเมื่อกดบันทึก
+                      </p>
                     </div>
-                    </div>
-                </fieldset>
-            )}
-            </div>
+                  </div>
 
-            {/* Footer */}
-            <footer className="flex justify-between items-center p-6 border-t bg-gray-50 rounded-b-xl">
+                  <div className="md:col-span-2 mt-4">
+
+                    <FormField label="Notes / Result (Log)">
+                      <p className="text-sm text-gray-600 mb-2 font-medium">
+                        {logInfo.summaryText}
+                      </p>
+                      <textarea
+                        name="Notes / Result"
+                        value={logInfo.formattedLog}
+                        onChange={handleChange}
+                        className={`${baseInputClass} bg-gray-100`}
+                        rows={5}
+                        readOnly
+                        placeholder="ประวัติการอัปเดตจะแสดงที่นี่..."
+                      />
+                    </FormField>
+                  </div>
+                </div>
+              </fieldset>
+            )}
+          </div>
+
+          {/* Footer */}
+          <footer className="flex justify-between items-center p-6 border-t bg-gray-50 rounded-b-xl">
             <div>
-                {/* ปุ่ม Navigation */}
-                <button
+              {/* ปุ่ม Navigation */}
+              <button
                 type="button"
                 onClick={() => onNavigate('previous')}
                 disabled={!canNavigatePrev || isLoading}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50 disabled:opacity-50"
-                >
+              >
                 <ArrowLeftIcon />
-                </button>
-                <button
+              </button>
+              <button
                 type="button"
                 onClick={() => onNavigate('next')}
                 disabled={!canNavigateNext || isLoading}
                 className="ml-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50 disabled:opacity-50"
-                >
+              >
                 <ArrowRightIcon />
-                </button>
+              </button>
             </div>
             <div>
-                {currentModeIsView ? (
+              {currentModeIsView ? (
                 <>
-                    <button
+                  <button
                     type="button"
                     onClick={handleClose}
                     disabled={isLoading}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50"
-                    >
+                  >
                     ปิด
-                    </button>
-                    {/* ปุ่มเข้าสู่โหมดแก้ไข */}
-                    {!isViewOnly && (
+                  </button>
+                  {/* ปุ่มเข้าสู่โหมดแก้ไข */}
+                  {!isViewOnly && (
                     <button
-                        type="button"
-                        // [⭐ BUG FIX] ใช้ onClick + setTimeout(0) เพื่อป้องกัน Race Condition ในทุกกรณี (รวมถึง "Help Me")
-                        onClick={() => {
-                            // เลื่อนการเปลี่ยน State ออกไป เพื่อให้ Event Loop นี้จบก่อน
-                            setTimeout(() => setIsEditing(true), 0);
-                        }}
-                        disabled={isLoading}
-                        className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none disabled:bg-gray-400"
+                      type="button"
+                      // [⭐ BUG FIX] ใช้ onClick + setTimeout(0) เพื่อป้องกัน Race Condition ในทุกกรณี (รวมถึง "Help Me")
+                      onClick={() => {
+                        // เลื่อนการเปลี่ยน State ออกไป เพื่อให้ Event Loop นี้จบก่อน
+                        setTimeout(() => setIsEditing(true), 0);
+                      }}
+                      disabled={isLoading}
+                      className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none disabled:bg-gray-400"
                     >
-                        แก้ไข
+                      แก้ไข
                     </button>
-                    )}
+                  )}
                 </>
-                ) : (
+              ) : (
                 <>
-                    <button
+                  <button
                     type="button"
                     onClick={handleCancelEdit}
                     disabled={isLoading || isSaving}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50"
-                    >
+                  >
                     ยกเลิก
-                    </button>
-                    <button
+                  </button>
+                  <button
                     type="submit"
                     disabled={isLoading || isSaving || (requiresReason && !updateReason.trim())}
                     className="ml-3 px-6 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md shadow-sm hover:bg-orange-600 focus:outline-none disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    >
+                  >
                     {isLoading || isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
-                    </button>
+                  </button>
                 </>
-                )}
+              )}
             </div>
-            </footer>
+          </footer>
         </form>
       </div>
     </div>
