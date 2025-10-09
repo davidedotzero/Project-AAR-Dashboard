@@ -7,7 +7,8 @@ export const ownerOptions: string[] = [
   "WEB",
   "MANAGEMENT",
   "STORES(หน้าร้าน)",
-  "SALES",
+  "SALES A",
+  "SALES B",
 ];
 export const statusOptions: string[] = [
   "In Progress",
